@@ -48,6 +48,15 @@ glm::ivec3 Block::s_CubeNormals[6] = {
 	glm::ivec3( 0,-1, 0)  // bottom
 };
 
+glm::vec3 Block::s_CubeColors[6] = {
+	glm::vec3(0.80f, 0.80f, 0.80f), // front
+	glm::vec3(0.80f, 0.80f, 0.80f), // back
+	glm::vec3(0.85f, 0.85f, 0.85f), // right
+	glm::vec3(0.85f, 0.85f, 0.85f), // left
+	glm::vec3(1.00f, 1.00f, 1.00f), // top
+	glm::vec3(1.00f, 1.00f, 1.00f)  // bottom
+};
+
 unsigned int Block::s_CubeIndices[6] = {
 	0, 1, 2, 2, 3, 0
 };
@@ -61,7 +70,7 @@ Block::Block()
 {
 }
 
-Block::Block(Type type, const glm::ivec3& position)
+Block::Block(Type type, const glm::vec3& position)
 	: m_Type(type), m_TexCoords(), m_Position(position)
 {
 	GenerateTexCoords();
@@ -79,6 +88,38 @@ Block::Type Block::GetType()
 const std::array<glm::vec2, 4>& Block::GetTexCoords()
 {
 	return m_TexCoords;
+}
+
+bool Block::Intersect(const Ray& ray)
+{
+	glm::vec3 vMin = m_Position - glm::vec3(0.5f);
+	glm::vec3 vMax = m_Position + glm::vec3(0.5f);
+
+	float xMin = (vMin.x - ray.m_Origin.x) / ray.m_Direction.x;
+	float xMax = (vMax.x - ray.m_Origin.x) / ray.m_Direction.x;
+	float yMin = (vMin.y - ray.m_Origin.y) / ray.m_Direction.y;
+	float yMax = (vMax.y - ray.m_Origin.y) / ray.m_Direction.y;
+	float zMin = (vMin.z - ray.m_Origin.z) / ray.m_Direction.z;
+	float zMax = (vMax.z - ray.m_Origin.z) / ray.m_Direction.z;
+
+	if (xMin > xMax) std::swap(xMin, xMax);
+	if (yMin > yMax) std::swap(yMin, yMax);
+	if (zMin > zMax) std::swap(zMin, zMax);
+
+	float tMin = xMin;
+	float tMax = xMax;
+
+	if (tMin > yMax || yMin > tMax) return false;
+
+	if (yMin > tMin) tMin = yMin;
+	if (yMax < tMax) tMax = yMax;
+
+	if (tMin > zMax || zMin > tMax) return false;
+
+	if (zMin > tMin) tMin = zMin;
+	if (zMax < tMax) tMax = zMax;
+
+	return true;
 }
 
 void Block::GenerateTexCoords()

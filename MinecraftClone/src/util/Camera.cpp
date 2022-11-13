@@ -25,12 +25,12 @@ const glm::vec3& Camera::GetDirection()
 	return m_Direction;
 }
 
-void Camera::SetPosition(Direction movementDirection, float speed)
+void Camera::SetPosition(Direction direction, float speed)
 {
 	glm::vec3 R = glm::normalize(glm::cross(m_Direction, m_Up));
 	glm::vec3 F = glm::normalize(glm::cross(R, m_Up));
 
-	switch (movementDirection)
+	switch (direction)
 	{
 	case Direction::FORWARD:
 		m_Position -= F * speed;

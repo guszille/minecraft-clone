@@ -4,7 +4,7 @@
  * Developed by Gustavo Zille.
  */
 
-#define GLM_ENABLE_EXPERIMENTAL
+// #define GLM_ENABLE_EXPERIMENTAL
 #define STB_IMAGE_IMPLEMENTATION
 
 #include <string>
@@ -17,6 +17,7 @@
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
 
 unsigned int g_ScreenWidth = 1600;
@@ -86,6 +87,7 @@ int main(int argc, char* argv[])
 
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwSetKeyCallback(window, keyboardCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
     glfwSetCursorPosCallback(window, cursorPositionCallback);
 
     glViewport(0, 0, g_ScreenWidth, g_ScreenHeight);
@@ -101,7 +103,7 @@ int main(int argc, char* argv[])
     glFrontFace(GL_CCW);
     glCullFace(GL_BACK);
 
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     g_GameApp.Setup();
 
@@ -156,6 +158,21 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
         else if (action == GLFW_RELEASE)
         {
             g_GameApp.SetKeyState(key, false);
+        }
+    }
+}
+
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_RIGHT)
+    {
+        if (action == GLFW_PRESS)
+        {
+            g_GameApp.SetMouseButtonState(button, true);
+        }
+        else if (action == GLFW_RELEASE)
+        {
+            g_GameApp.SetMouseButtonState(button, false);
         }
     }
 }

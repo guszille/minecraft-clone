@@ -1,25 +1,24 @@
 #include "Application.h"
 
-Camera* g_Camera;
+Player* g_Player;
 World* g_World;
 Shader* g_BlockRenderShader;
 Texture* g_SpriteSheet;
 
-float g_CameraSpeed = 10.0f;
 float g_CameraSensitivity = 0.05f;
 
 Application::Application(unsigned int screenWidth, unsigned int screenHeight)
-	: m_ScreenWidth(screenWidth), m_ScreenHeight(screenHeight), m_Keys(), m_CursorAttached(false), m_LastMousePosition(), m_CurrMousePosition()
+	: m_ScreenWidth(screenWidth), m_ScreenHeight(screenHeight), m_Keys(), m_MouseButtons(), m_MouseButtonsProcessed(), m_CursorAttached(false), m_LastMousePosition(), m_CurrMousePosition()
 {
 	float fieldOfView = 45.0f;
 	float aspectRatio = (float)screenWidth / (float)screenHeight;
 
-	m_ProjectionMatrix = glm::perspective(glm::radians(fieldOfView), aspectRatio, 0.1f, 100.0f);
+	m_ProjectionMatrix = glm::perspective(glm::radians(fieldOfView), aspectRatio, 0.1f, 1000.0f);
 }
 
 Application::~Application()
 {
-	delete g_Camera;
+	delete g_Player;
 	delete g_World;
 	delete g_BlockRenderShader;
 	delete g_SpriteSheet;
@@ -27,36 +26,12 @@ Application::~Application()
 
 void Application::Setup()
 {
-	g_Camera = new Camera(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	g_Player = new Player(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), 15.0f, 4.0f);
 	g_World = new World();
 	g_BlockRenderShader = new Shader("res/shaders/block_render_vs.glsl", "res/shaders/block_render_fs.glsl");
 	g_SpriteSheet = new Texture("res/textures/minecraft_spritesheet.png");
 
-	// World chunk/blocks generation.
-	//
-	for (int i = -8; i < 8; i++)
-	{
-		for (int j = -8; j < 8; j++)
-		{
-			std::pair<int, int> chunkPosition = { i, j };
-			Chunk chunk(chunkPosition);
-	
-			for (unsigned int x = 0; x < Chunk::s_DefaultDimensions.x; x++)
-			{
-				for (unsigned int y = 0; y < Chunk::s_DefaultDimensions.y / 2; y++)
-				{
-					for (unsigned int z = 0; z < Chunk::s_DefaultDimensions.z; z++)
-					{
-						chunk.InsertBlock(Block(Block::Type::GRASS, glm::ivec3(x, y, z)));
-					}
-				}
-			}
-
-			g_World->InsertChunk(chunk);
-		}
-	}
-
-	g_World->GenerateMeshes();
+	WorldGenerator::Execute(g_World, std::pair<int, int>(0, 0), 8);
 
 	g_BlockRenderShader->Bind();
 	g_BlockRenderShader->SetUniformMatrix4fv("uProjectionMatrix", m_ProjectionMatrix);
@@ -72,35 +47,17 @@ void Application::Update(float deltaTime)
 
 void Application::ProcessInput(float deltaTime)
 {
-	if (m_Keys[GLFW_KEY_W])
-	{
-		g_Camera->SetPosition(Camera::Direction::FORWARD, g_CameraSpeed * deltaTime);
-	}
+	if (m_Keys[GLFW_KEY_W]) { g_Player->SetPosition(Camera::Direction::FORWARD, deltaTime); }
 
-	if (m_Keys[GLFW_KEY_S])
-	{
-		g_Camera->SetPosition(Camera::Direction::BACKWARD, g_CameraSpeed * deltaTime);
-	}
+	if (m_Keys[GLFW_KEY_S]) { g_Player->SetPosition(Camera::Direction::BACKWARD, deltaTime); }
 
-	if (m_Keys[GLFW_KEY_D])
-	{
-		g_Camera->SetPosition(Camera::Direction::RIGHT, g_CameraSpeed * deltaTime);
-	}
+	if (m_Keys[GLFW_KEY_D]) { g_Player->SetPosition(Camera::Direction::RIGHT, deltaTime); }
 
-	if (m_Keys[GLFW_KEY_A])
-	{
-		g_Camera->SetPosition(Camera::Direction::LEFT, g_CameraSpeed * deltaTime);
-	}
+	if (m_Keys[GLFW_KEY_A]) { g_Player->SetPosition(Camera::Direction::LEFT, deltaTime); }
 
-	if (m_Keys[GLFW_KEY_LEFT_SHIFT])
-	{
-		g_Camera->SetPosition(Camera::Direction::UP, g_CameraSpeed * deltaTime);
-	}
+	if (m_Keys[GLFW_KEY_LEFT_SHIFT]) { g_Player->SetPosition(Camera::Direction::UP, deltaTime); }
 
-	if (m_Keys[GLFW_KEY_LEFT_CONTROL])
-	{
-		g_Camera->SetPosition(Camera::Direction::DOWN, g_CameraSpeed * deltaTime);
-	}
+	if (m_Keys[GLFW_KEY_LEFT_CONTROL]) { g_Player->SetPosition(Camera::Direction::DOWN, deltaTime); }
 
 	if (m_LastMousePosition != m_CurrMousePosition)
 	{
@@ -115,14 +72,21 @@ void Application::ProcessInput(float deltaTime)
 
 		m_CurrMousePosition = m_LastMousePosition;
 
-		g_Camera->SetDirection(xOffset, yOffset);
+		g_Player->SetDirection(xOffset, yOffset);
+	}
+
+	if (m_MouseButtons[GLFW_MOUSE_BUTTON_RIGHT] && !m_MouseButtonsProcessed[GLFW_MOUSE_BUTTON_RIGHT])
+	{
+		g_World->CastRay(g_Player->GetPosition(), g_Player->GetDirection(), g_Player->m_Range);
+
+		m_MouseButtonsProcessed[GLFW_MOUSE_BUTTON_RIGHT] = true;
 	}
 }
 
 void Application::Render()
 {
 	g_BlockRenderShader->Bind();
-	g_BlockRenderShader->SetUniformMatrix4fv("uViewMatrix", g_Camera->GetViewMatrix());
+	g_BlockRenderShader->SetUniformMatrix4fv("uViewMatrix", g_Player->GetViewMatrix());
 
 	g_World->Render(g_BlockRenderShader);
 
@@ -132,6 +96,12 @@ void Application::Render()
 void Application::SetKeyState(int index, bool pressed)
 {
 	m_Keys[index] = pressed;
+}
+
+void Application::SetMouseButtonState(int index, bool pressed)
+{
+	m_MouseButtons[index] = pressed;
+	m_MouseButtonsProcessed[index] = false;
 }
 
 void Application::SetMousePosition(float x, float y)

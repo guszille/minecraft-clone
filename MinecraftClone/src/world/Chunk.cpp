@@ -28,15 +28,15 @@ Chunk::~Chunk()
 {
 }
 
-void Chunk::InsertBlock(const Block& block)
+void Chunk::InsertBlockAt(const Block& block, const glm::ivec3& position)
 {
-	if (block.m_Position.x >= 0 && block.m_Position.x < s_DefaultDimensions.x)
+	if (position.x >= 0 && position.x < s_DefaultDimensions.x)
 	{
-		if (block.m_Position.y >= 0 && block.m_Position.y < s_DefaultDimensions.y)
+		if (position.y >= 0 && position.y < s_DefaultDimensions.y)
 		{
-			if (block.m_Position.z >= 0 && block.m_Position.z < s_DefaultDimensions.z)
+			if (position.z >= 0 && position.z < s_DefaultDimensions.z)
 			{
-				m_Blocks[block.m_Position.x][block.m_Position.y][block.m_Position.z] = block;
+				m_Blocks[position.x][position.y][position.z] = block;
 			}
 		}
 	}
@@ -74,6 +74,10 @@ Block& Chunk::GetBlockAt(const glm::ivec3& position)
 
 void Chunk::GenerateMesh(Chunk* chunksArround[4])
 {
+	// FIXME
+	glm::vec3 colorFactor((float)rand() / RAND_MAX, (float)rand() / RAND_MAX, (float)rand() / RAND_MAX);
+	// FIXME
+
 	for (unsigned int x = 0; x < s_DefaultDimensions.x; x++)
 	{
 		for (unsigned int y = 0; y < s_DefaultDimensions.y; y++)
@@ -81,6 +85,7 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 			for (unsigned int z = 0; z < s_DefaultDimensions.z; z++)
 			{
 				Block& block = m_Blocks[x][y][z];
+				glm::ivec3 localBlockPosition(x, y, z);
 
 				if (block.GetType() != Block::Type::EMPTY)
 				{
@@ -90,13 +95,14 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 
 						if (i == Block::Face::FRONT)
 						{
-							if (block.m_Position.z == s_DefaultDimensions.z - 1)
+							if (localBlockPosition.z == s_DefaultDimensions.z - 1)
 							{
 								Chunk* chunk = chunksArround[i];
 
 								if (chunk != nullptr)
 								{
-									Block& obstructingBlock = chunk->GetBlockAt(glm::ivec3(block.m_Position.x, block.m_Position.y, 0));
+									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Block::s_CubeNormals[i]);
+									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
 									if (obstructingBlock.GetType() == Block::Type::EMPTY)
 									{
@@ -110,7 +116,7 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(block.m_Position + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
 
 								if (obstructingBlock.GetType() == Block::Type::EMPTY)
 								{
@@ -120,13 +126,14 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 						}
 						else if (i == Block::Face::BACK)
 						{
-							if (block.m_Position.z == 0)
+							if (localBlockPosition.z == 0)
 							{
 								Chunk* chunk = chunksArround[i];
 
 								if (chunk != nullptr)
 								{
-									Block& obstructingBlock = chunk->GetBlockAt(glm::ivec3(block.m_Position.x, block.m_Position.y, s_DefaultDimensions.z - 1));
+									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Block::s_CubeNormals[i]);
+									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
 									if (obstructingBlock.GetType() == Block::Type::EMPTY)
 									{
@@ -140,7 +147,7 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(block.m_Position + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
 
 								if (obstructingBlock.GetType() == Block::Type::EMPTY)
 								{
@@ -150,13 +157,14 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 						}
 						else if (i == Block::Face::RIGHT)
 						{
-							if (block.m_Position.x == s_DefaultDimensions.x - 1)
+							if (localBlockPosition.x == s_DefaultDimensions.x - 1)
 							{
 								Chunk* chunk = chunksArround[i];
 
 								if (chunk != nullptr)
 								{
-									Block& obstructingBlock = chunk->GetBlockAt(glm::ivec3(0, block.m_Position.y, block.m_Position.z));
+									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Block::s_CubeNormals[i]);
+									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
 									if (obstructingBlock.GetType() == Block::Type::EMPTY)
 									{
@@ -170,7 +178,7 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(block.m_Position + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
 
 								if (obstructingBlock.GetType() == Block::Type::EMPTY)
 								{
@@ -180,13 +188,14 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 						}
 						else if (i == Block::Face::LEFT)
 						{
-							if (block.m_Position.x == 0)
+							if (localBlockPosition.x == 0)
 							{
 								Chunk* chunk = chunksArround[i];
 
 								if (chunk != nullptr)
 								{
-									Block& obstructingBlock = chunk->GetBlockAt(glm::ivec3(s_DefaultDimensions.x - 1, block.m_Position.y, block.m_Position.z));
+									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Block::s_CubeNormals[i]);
+									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
 									if (obstructingBlock.GetType() == Block::Type::EMPTY)
 									{
@@ -200,7 +209,7 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(block.m_Position + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
 
 								if (obstructingBlock.GetType() == Block::Type::EMPTY)
 								{
@@ -210,13 +219,13 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 						}
 						else if (i == Block::Face::TOP)
 						{
-							if (block.m_Position.y == s_DefaultDimensions.y - 1)
+							if (localBlockPosition.y == s_DefaultDimensions.y - 1)
 							{
 								faceCanComposeMesh = true;
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(block.m_Position + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
 
 								if (obstructingBlock.GetType() == Block::Type::EMPTY)
 								{
@@ -226,13 +235,13 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 						}
 						else if (i == Block::Face::BOTTOM)
 						{
-							if (block.m_Position.y == 0)
+							if (localBlockPosition.y == 0)
 							{
 								faceCanComposeMesh = true;
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(block.m_Position + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
 
 								if (obstructingBlock.GetType() == Block::Type::EMPTY)
 								{
@@ -244,40 +253,65 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 						if (faceCanComposeMesh)
 						{
 							glm::vec3* vertices = Block::s_CubeVertices[i];
+							unsigned int* indices = Block::s_CubeIndices; // Same indices to all block faces.
+
 							const std::array<glm::vec2, 4>& uv = block.GetTexCoords();
-							unsigned int* indices = Block::s_CubeIndices;
+							glm::vec3 c = Block::s_CubeColors[i];
 
-							glm::mat4 blockModelMatrix = glm::mat4(1.0f);
-							blockModelMatrix = glm::translate(blockModelMatrix, (glm::vec3)block.m_Position);
+							// FIXME
+							c = c * colorFactor;
+							// FIXME
 
-							glm::vec4 v0 = blockModelMatrix * glm::vec4(vertices[0], 1.0f);
-							glm::vec4 v1 = blockModelMatrix * glm::vec4(vertices[1], 1.0f);
-							glm::vec4 v2 = blockModelMatrix * glm::vec4(vertices[2], 1.0f);
-							glm::vec4 v3 = blockModelMatrix * glm::vec4(vertices[3], 1.0f);
+							glm::vec3 v0 = vertices[0] + (glm::vec3)localBlockPosition;
+							glm::vec3 v1 = vertices[1] + (glm::vec3)localBlockPosition;
+							glm::vec3 v2 = vertices[2] + (glm::vec3)localBlockPosition;
+							glm::vec3 v3 = vertices[3] + (glm::vec3)localBlockPosition;
+
+							// The transformations above are the same as:
+							//
+							//		glm::mat4 blockModelMatrix = glm::mat4(1.0f);
+							//		blockModelMatrix = glm::translate(blockModelMatrix, (glm::vec3)localBlockPosition);
+							//
+							//		glm::vec4 v0 = blockModelMatrix * glm::vec4(vertices[0], 1.0f);
+							//		glm::vec4 v1 = blockModelMatrix * glm::vec4(vertices[1], 1.0f);
+							//		glm::vec4 v2 = blockModelMatrix * glm::vec4(vertices[2], 1.0f);
+							//		glm::vec4 v3 = blockModelMatrix * glm::vec4(vertices[3], 1.0f);
 
 							m_Mesh.m_Vertices.push_back(v0.x);
 							m_Mesh.m_Vertices.push_back(v0.y);
 							m_Mesh.m_Vertices.push_back(v0.z);
 							m_Mesh.m_Vertices.push_back(uv[0].x);
 							m_Mesh.m_Vertices.push_back(uv[0].y);
+							m_Mesh.m_Vertices.push_back(c.r);
+							m_Mesh.m_Vertices.push_back(c.g);
+							m_Mesh.m_Vertices.push_back(c.b);
 
 							m_Mesh.m_Vertices.push_back(v1.x);
 							m_Mesh.m_Vertices.push_back(v1.y);
 							m_Mesh.m_Vertices.push_back(v1.z);
 							m_Mesh.m_Vertices.push_back(uv[1].x);
 							m_Mesh.m_Vertices.push_back(uv[1].y);
+							m_Mesh.m_Vertices.push_back(c.r);
+							m_Mesh.m_Vertices.push_back(c.g);
+							m_Mesh.m_Vertices.push_back(c.b);
 
 							m_Mesh.m_Vertices.push_back(v2.x);
 							m_Mesh.m_Vertices.push_back(v2.y);
 							m_Mesh.m_Vertices.push_back(v2.z);
 							m_Mesh.m_Vertices.push_back(uv[2].x);
 							m_Mesh.m_Vertices.push_back(uv[2].y);
+							m_Mesh.m_Vertices.push_back(c.r);
+							m_Mesh.m_Vertices.push_back(c.g);
+							m_Mesh.m_Vertices.push_back(c.b);
 
 							m_Mesh.m_Vertices.push_back(v3.x);
 							m_Mesh.m_Vertices.push_back(v3.y);
 							m_Mesh.m_Vertices.push_back(v3.z);
 							m_Mesh.m_Vertices.push_back(uv[3].x);
 							m_Mesh.m_Vertices.push_back(uv[3].y);
+							m_Mesh.m_Vertices.push_back(c.r);
+							m_Mesh.m_Vertices.push_back(c.g);
+							m_Mesh.m_Vertices.push_back(c.b);
 
 							m_Mesh.m_Indices.push_back(indices[0] + (m_Mesh.m_NumberOfFaces * 4));
 							m_Mesh.m_Indices.push_back(indices[1] + (m_Mesh.m_NumberOfFaces * 4));
@@ -314,6 +348,43 @@ void Chunk::Render(Shader* shaderProgram)
 	m_Mesh.Render();
 }
 
+Collision Chunk::Intersect(const Ray& ray)
+{
+	Collision coll = std::make_tuple(false, glm::vec3(0.0f));
+	float distanceToClosestBlock = 0.0f;
+
+	for (unsigned int x = 0; x < s_DefaultDimensions.x; x++)
+	{
+		for (unsigned int y = 0; y < s_DefaultDimensions.y; y++)
+		{
+			for (unsigned int z = 0; z < s_DefaultDimensions.z; z++)
+			{
+				Block& block = m_Blocks[x][y][z];
+
+				if (block.GetType() != Block::Type::EMPTY)
+				{
+					float distanceToCurrBlock = glm::length(block.m_Position - ray.m_Origin);
+
+					if (ray.m_Length + 0.5f >= distanceToCurrBlock)
+					{
+						if (block.Intersect(ray))
+						{
+							if (!std::get<0>(coll) || distanceToCurrBlock < distanceToClosestBlock)
+							{
+								coll = std::make_tuple(true, block.m_Position);
+
+								distanceToClosestBlock = distanceToCurrBlock;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return coll;
+}
+
 void Chunk::Clear()
 {
 	if (m_Blocks)
@@ -330,4 +401,21 @@ void Chunk::Clear()
 
 		delete[] m_Blocks;
 	}
+}
+
+glm::ivec3 Chunk::GetNextLocalBlockPosition(const glm::ivec3& position, const glm::ivec3& direction)
+{
+	glm::ivec3 nextPosition = position + direction;
+
+	if (nextPosition.x < 0) { nextPosition.x = 15; }
+
+	if (nextPosition.y < 0) { nextPosition.y = 15; }
+
+	if (nextPosition.z < 0) { nextPosition.z = 15; }
+
+	nextPosition.x = nextPosition.x % s_DefaultDimensions.x;
+	nextPosition.y = nextPosition.y % s_DefaultDimensions.y;
+	nextPosition.z = nextPosition.z % s_DefaultDimensions.z;
+
+	return nextPosition;
 }

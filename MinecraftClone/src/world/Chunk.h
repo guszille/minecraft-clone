@@ -1,14 +1,15 @@
 #pragma once
 
 #include <map>
+#include <tuple>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/hash.hpp>
 
 #include "../graphics/core/Shader.h"
-
 #include "../graphics/Mesh.h"
+
+#include "../util/Ray.h"
 
 #include "Block.h"
 
@@ -25,7 +26,7 @@ public:
 	Chunk(const std::pair<int, int>& position);
 	~Chunk();
 
-	void InsertBlock(const Block& block);
+	void InsertBlockAt(const Block& block, const glm::ivec3& position);
 	void RemoveBlockAt(const glm::ivec3& position);
 
 	Block& GetBlockAt(const glm::ivec3& position);
@@ -35,9 +36,13 @@ public:
 
 	void Render(Shader* shaderProgram);
 
+	Collision Intersect(const Ray& ray);
+
 	void Clear();
 
 private:
 	Block*** m_Blocks;
 	Mesh m_Mesh;
+
+	static glm::ivec3 GetNextLocalBlockPosition(const glm::ivec3& position, const glm::ivec3& direction);
 };

@@ -18,7 +18,7 @@ public:
 	const glm::vec3& GetPosition();
 	const glm::vec3& GetDirection();
 
-	void SetPosition(Direction movementDirection, float speed);
+	void SetPosition(Direction direction, float speed);
 	void SetDirection(float xOffset, float yOffset);
 
 private:

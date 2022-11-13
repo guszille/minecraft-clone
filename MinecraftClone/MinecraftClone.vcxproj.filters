@@ -33,16 +33,28 @@
     <ClCompile Include="src\graphics\core\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\util\World.cpp">
+    <ClCompile Include="src\world\World.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\util\Block.cpp">
+    <ClCompile Include="src\world\Block.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\util\Chunk.cpp">
+    <ClCompile Include="src\world\Chunk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\Mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\WorldGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\debug\ChunkDebugRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\Player.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\Ray.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -59,16 +71,28 @@
     <ClInclude Include="src\graphics\core\Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\util\World.h">
+    <ClInclude Include="src\world\World.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\util\Block.h">
+    <ClInclude Include="src\world\Block.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\util\Chunk.h">
+    <ClInclude Include="src\world\Chunk.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\graphics\Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\WorldGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\debug\ChunkDebugRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\Player.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\Ray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

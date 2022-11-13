@@ -8,8 +8,10 @@
 #include "graphics/core/Shader.h"
 #include "graphics/core/Texture.h"
 
-#include "util/Camera.h"
-#include "util/World.h"
+#include "util/Player.h"
+
+#include "world/World.h"
+#include "world/WorldGenerator.h"
 
 class Application
 {
@@ -23,12 +25,15 @@ public:
 	void Render();
 
 	void SetKeyState(int index, bool pressed);
+	void SetMouseButtonState(int index, bool pressed);
 	void SetMousePosition(float x, float y);
 
 private:
 	unsigned int m_ScreenWidth, m_ScreenHeight;
 	
 	bool m_Keys[1024];
+	bool m_MouseButtons[2];
+	bool m_MouseButtonsProcessed[2];
 	bool m_CursorAttached;
 	glm::vec2 m_LastMousePosition, m_CurrMousePosition;
 

@@ -1,14 +1,16 @@
 #pragma once
 
 #include <map>
+#include <tuple>
 
 #include <glm/glm.hpp>
-#include <glm/gtx/hash.hpp>
 
 #include "../graphics/core/Shader.h"
 
-#include "Chunk.h"
+#include "../util/Ray.h"
+
 #include "Block.h"
+#include "Chunk.h"
 
 class World
 {
@@ -19,7 +21,7 @@ public:
 	void InsertChunk(const Chunk& chunk);
 	void RemoveChunkAt(const std::pair<int, int>& position);
 
-	void InsertChunkBlock(const Chunk& chunk, const Block& block);
+	void InsertChunkBlockAt(const Chunk& chunk, const Block& block, const glm::ivec3& position);
 	void RemoveChunkBlockAt(const Chunk& chunk, const glm::ivec3& position);
 
 	Chunk& GetChunkAt(const std::pair<int, int>& position);
@@ -27,6 +29,8 @@ public:
 	void GenerateMeshes();
 
 	void Render(Shader* shaderProgram);
+
+	void CastRay(const glm::vec3& origin, const glm::vec3& direction, float length);
 
 private:
 	std::map<std::pair<int, int>, Chunk> m_Chunks;
