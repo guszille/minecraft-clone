@@ -18,14 +18,14 @@ void World::RemoveChunkAt(const std::pair<int, int>& position)
 	m_Chunks.erase(position);
 }
 
-void World::InsertChunkBlockAt(const Chunk& chunk, const Block& block, const glm::ivec3& position)
+void World::InsertBlockAt(const std::pair<int, int>& chunkPosition, const Block& block, const glm::ivec3& blockPosition)
 {
-	m_Chunks.at(chunk.m_Position).InsertBlockAt(block, position);
+	m_Chunks.at(chunkPosition).InsertBlockAt(block, blockPosition);
 }
 
-void World::RemoveChunkBlockAt(const Chunk& chunk, const glm::ivec3& position)
+void World::RemoveBlockAt(const std::pair<int, int>& chunkPosition, const glm::ivec3& blockPosition)
 {
-	m_Chunks.at(chunk.m_Position).RemoveBlockAt(position);
+	m_Chunks.at(chunkPosition).RemoveBlockAt(blockPosition);
 }
 
 Chunk& World::GetChunkAt(const std::pair<int, int>& position)
@@ -55,6 +55,24 @@ void World::GenerateMeshes()
 	}
 }
 
+void World::UpdateChunkMesh(const std::pair<int, int>& chunkPosition)
+{
+	Chunk& chunk = m_Chunks.at(chunkPosition);
+	Chunk* chunksArround[4];
+
+	std::pair<int, int> p0 = { chunk.m_Position.first, chunk.m_Position.second + 1 }; // front
+	std::pair<int, int> p1 = { chunk.m_Position.first, chunk.m_Position.second - 1 }; // back
+	std::pair<int, int> p2 = { chunk.m_Position.first + 1, chunk.m_Position.second }; // right
+	std::pair<int, int> p3 = { chunk.m_Position.first - 1, chunk.m_Position.second }; // left
+
+	chunksArround[0] = GetChunkIfExists(p0);
+	chunksArround[1] = GetChunkIfExists(p1);
+	chunksArround[2] = GetChunkIfExists(p2);
+	chunksArround[3] = GetChunkIfExists(p3);
+
+	chunk.UpdateMesh(chunksArround);
+}
+
 void World::Render(Shader* shaderProgram)
 {
 	// WARNING:
@@ -69,9 +87,9 @@ void World::Render(Shader* shaderProgram)
 	}
 }
 
-void World::CastRay(const glm::vec3& origin, const glm::vec3& direction, float length)
+Intersection World::CastRay(const glm::vec3& origin, const glm::vec3& direction, float length)
 {
-	Collision coll = std::make_tuple(false, glm::vec3(0.0f));
+	Intersection worldIntersection = std::make_tuple(false, std::make_pair(0, 0), glm::ivec3(0), glm::vec3(0.0f), -1);
 	float distanceToClosestBlock = 0.0f;
 
 	Ray ray(origin, direction, length);
@@ -105,28 +123,22 @@ void World::CastRay(const glm::vec3& origin, const glm::vec3& direction, float l
 	{
 		if (chunksArround[i] != nullptr)
 		{
-			Collision chunkClosestColl = chunksArround[i]->Intersect(ray);
+			Intersection chunkIntersection = chunksArround[i]->Intersect(ray);
 
-			if (std::get<0>(chunkClosestColl))
+			if (std::get<0>(chunkIntersection))
 			{
-				float distanceToCurrChunkBlock = glm::length(std::get<1>(chunkClosestColl) - ray.m_Origin);
+				float distanceToCurrChunkBlock = glm::length(std::get<3>(chunkIntersection) - ray.m_Origin);
 
-				if (!std::get<0>(coll) || distanceToCurrChunkBlock < distanceToClosestBlock)
+				if (!std::get<0>(worldIntersection) || distanceToCurrChunkBlock < distanceToClosestBlock)
 				{
-					coll = chunkClosestColl;
-
 					distanceToClosestBlock = distanceToCurrChunkBlock;
+					worldIntersection = chunkIntersection;
 				}
 			}
 		}
 	}
 
-	if (std::get<0>(coll))
-	{
-		glm::vec3 blockPosition = std::get<1>(coll);
-
-		std::cout << "INTERSECTED BLOCK AT [" << blockPosition.x << " " << blockPosition.y << " " << blockPosition.z << "]" << std::endl;
-	}
+	return worldIntersection;
 }
 
 Chunk* World::GetChunkIfExists(const std::pair<int, int>& position)

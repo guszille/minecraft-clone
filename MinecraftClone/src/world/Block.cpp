@@ -90,7 +90,7 @@ const std::array<glm::vec2, 4>& Block::GetTexCoords()
 	return m_TexCoords;
 }
 
-bool Block::Intersect(const Ray& ray)
+std::pair<bool, int> Block::Intersect(const Ray& ray)
 {
 	glm::vec3 vMin = m_Position - glm::vec3(0.5f);
 	glm::vec3 vMax = m_Position + glm::vec3(0.5f);
@@ -109,17 +109,34 @@ bool Block::Intersect(const Ray& ray)
 	float tMin = xMin;
 	float tMax = xMax;
 
-	if (tMin > yMax || yMin > tMax) return false;
+	if (tMin > yMax || yMin > tMax) return std::make_pair(false, -1);
 
 	if (yMin > tMin) tMin = yMin;
 	if (yMax < tMax) tMax = yMax;
 
-	if (tMin > zMax || zMin > tMax) return false;
+	if (tMin > zMax || zMin > tMax) return std::make_pair(false, -1);
 
 	if (zMin > tMin) tMin = zMin;
 	if (zMax < tMax) tMax = zMax;
 
-	return true;
+	glm::vec3 P = ray.m_Origin + ray.m_Direction * tMin;
+	std::pair<bool, int> intersection(true, -1);
+
+	for (unsigned int i = 0; i < 6; i++)
+	{
+		glm::vec3 N = (glm::vec3)s_CubeNormals[i];
+		glm::vec3 V = P - (i % 2 == 0 ? vMax : vMin); // Even index could be FRONT, RIGHT or TOP. Odd index could be BACK, LEFT or BOTTOM.
+
+		float dot = glm::dot(N, V);
+
+		if (dot == 0.0f)
+		{
+			intersection.second = i;
+			break;
+		}
+	}
+
+	return intersection;
 }
 
 void Block::GenerateTexCoords()

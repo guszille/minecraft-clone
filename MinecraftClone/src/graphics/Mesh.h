@@ -18,6 +18,7 @@ public:
 
 	void GenerateRenderData();
 	void UpdateRenderData();
+	void ClearRenderData();
 
 	void Render();
 

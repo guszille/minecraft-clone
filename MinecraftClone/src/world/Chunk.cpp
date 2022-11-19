@@ -4,12 +4,12 @@ glm::ivec3 Chunk::s_DefaultDimensions(16, 256, 16);
 int Chunk::s_DefaultYPosition = -128;
 
 Chunk::Chunk()
-	: m_Position(), m_Blocks(nullptr)
+	: m_Position(), m_Blocks(nullptr), m_DebugColor()
 {
 }
 
 Chunk::Chunk(const std::pair<int, int>& position)
-	: m_Position(position)
+	: m_Position(position), m_DebugColor((float)std::rand() / RAND_MAX, (float)std::rand() / RAND_MAX, (float)std::rand() / RAND_MAX)
 {
 	m_Blocks = new Block**[s_DefaultDimensions.x];
 
@@ -30,43 +30,25 @@ Chunk::~Chunk()
 
 void Chunk::InsertBlockAt(const Block& block, const glm::ivec3& position)
 {
-	if (position.x >= 0 && position.x < s_DefaultDimensions.x)
+	if (IsAValidPosition(position))
 	{
-		if (position.y >= 0 && position.y < s_DefaultDimensions.y)
-		{
-			if (position.z >= 0 && position.z < s_DefaultDimensions.z)
-			{
-				m_Blocks[position.x][position.y][position.z] = block;
-			}
-		}
+		m_Blocks[position.x][position.y][position.z] = block;
 	}
 }
 
 void Chunk::RemoveBlockAt(const glm::ivec3& position)
 {
-	if (position.x >= 0 && position.x < s_DefaultDimensions.x)
+	if (IsAValidPosition(position))
 	{
-		if (position.y >= 0 && position.y < s_DefaultDimensions.y)
-		{
-			if (position.z >= 0 && position.z < s_DefaultDimensions.z)
-			{
-				m_Blocks[position.x][position.y][position.z] = Block();
-			}
-		}
+		m_Blocks[position.x][position.y][position.z] = Block();
 	}
 }
 
 Block& Chunk::GetBlockAt(const glm::ivec3& position)
 {
-	if (position.x >= 0 && position.x < s_DefaultDimensions.x)
+	if (IsAValidPosition(position))
 	{
-		if (position.y >= 0 && position.y < s_DefaultDimensions.y)
-		{
-			if (position.z >= 0 && position.z < s_DefaultDimensions.z)
-			{
-				return m_Blocks[position.x][position.y][position.z];
-			}
-		}
+		return m_Blocks[position.x][position.y][position.z];
 	}
 
 	throw("The provided position is out of chunk!");
@@ -74,10 +56,96 @@ Block& Chunk::GetBlockAt(const glm::ivec3& position)
 
 void Chunk::GenerateMesh(Chunk* chunksArround[4])
 {
-	// FIXME
-	glm::vec3 colorFactor((float)rand() / RAND_MAX, (float)rand() / RAND_MAX, (float)rand() / RAND_MAX);
-	// FIXME
+	SampleRenderableFaces(chunksArround);
 
+	m_Mesh.GenerateRenderData();
+}
+
+void Chunk::UpdateMesh(Chunk* chunksArround[4])
+{
+	m_Mesh.m_Vertices.clear();
+	m_Mesh.m_Indices.clear();
+
+	m_Mesh.m_NumberOfFaces = 0;
+
+	SampleRenderableFaces(chunksArround);
+	
+	m_Mesh.UpdateRenderData();
+}
+
+void Chunk::Render(Shader* shaderProgram)
+{
+	glm::vec3 chunkPosition(m_Position.first * s_DefaultDimensions.x, s_DefaultYPosition, m_Position.second * s_DefaultDimensions.z);
+
+	glm::mat4 modelMatrix(1.0f);
+	modelMatrix = glm::translate(modelMatrix, chunkPosition);
+
+	shaderProgram->SetUniformMatrix4fv("uModelMatrix", modelMatrix);
+
+	m_Mesh.Render();
+}
+
+Intersection Chunk::Intersect(const Ray& ray)
+{
+	Intersection intersection = std::make_tuple(false, std::make_pair(0, 0), glm::ivec3(0), glm::vec3(0.0f), -1);
+	float distanceToClosestBlock = 0.0f;
+
+	for (unsigned int x = 0; x < s_DefaultDimensions.x; x++)
+	{
+		for (unsigned int y = 0; y < s_DefaultDimensions.y; y++)
+		{
+			for (unsigned int z = 0; z < s_DefaultDimensions.z; z++)
+			{
+				Block& block = m_Blocks[x][y][z];
+
+				if (block.GetType() != Block::Type::EMPTY)
+				{
+					float distanceToCurrBlock = glm::length(block.m_Position - ray.m_Origin);
+
+					if (ray.m_Length + 0.5f >= distanceToCurrBlock)
+					{
+						std::pair<bool, int> blockIntersection = block.Intersect(ray);
+
+						if (blockIntersection.first)
+						{
+							if (!std::get<0>(intersection) || distanceToCurrBlock < distanceToClosestBlock)
+							{
+								intersection = std::make_tuple(true, m_Position, glm::ivec3(x, y, z), block.m_Position, blockIntersection.second);
+
+								distanceToClosestBlock = distanceToCurrBlock;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return intersection;
+}
+
+void Chunk::Clear()
+{
+	if (m_Blocks)
+	{
+		for (unsigned int i = 0; i < s_DefaultDimensions.x; i++)
+		{
+			for (unsigned int j = 0; j < s_DefaultDimensions.y; j++)
+			{
+				delete[] m_Blocks[i][j];
+			}
+
+			delete[] m_Blocks[i];
+		}
+
+		delete[] m_Blocks;
+	}
+
+	m_Mesh.ClearRenderData();
+}
+
+void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
+{
 	for (unsigned int x = 0; x < s_DefaultDimensions.x; x++)
 	{
 		for (unsigned int y = 0; y < s_DefaultDimensions.y; y++)
@@ -258,24 +326,13 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 							const std::array<glm::vec2, 4>& uv = block.GetTexCoords();
 							glm::vec3 c = Block::s_CubeColors[i];
 
-							// FIXME
-							c = c * colorFactor;
-							// FIXME
+							// FIXME: Using only for debug.
+							c = c * m_DebugColor;
 
 							glm::vec3 v0 = vertices[0] + (glm::vec3)localBlockPosition;
 							glm::vec3 v1 = vertices[1] + (glm::vec3)localBlockPosition;
 							glm::vec3 v2 = vertices[2] + (glm::vec3)localBlockPosition;
 							glm::vec3 v3 = vertices[3] + (glm::vec3)localBlockPosition;
-
-							// The transformations above are the same as:
-							//
-							//		glm::mat4 blockModelMatrix = glm::mat4(1.0f);
-							//		blockModelMatrix = glm::translate(blockModelMatrix, (glm::vec3)localBlockPosition);
-							//
-							//		glm::vec4 v0 = blockModelMatrix * glm::vec4(vertices[0], 1.0f);
-							//		glm::vec4 v1 = blockModelMatrix * glm::vec4(vertices[1], 1.0f);
-							//		glm::vec4 v2 = blockModelMatrix * glm::vec4(vertices[2], 1.0f);
-							//		glm::vec4 v3 = blockModelMatrix * glm::vec4(vertices[3], 1.0f);
 
 							m_Mesh.m_Vertices.push_back(v0.x);
 							m_Mesh.m_Vertices.push_back(v0.y);
@@ -327,80 +384,22 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 			}
 		}
 	}
-
-	m_Mesh.GenerateRenderData();
 }
 
-void Chunk::UpdateMesh()
+bool Chunk::IsAValidPosition(const glm::ivec3& position)
 {
-	// TODO: Update mesh VBO.
-}
-
-void Chunk::Render(Shader* shaderProgram)
-{
-	glm::vec3 chunkPosition(m_Position.first * s_DefaultDimensions.x, s_DefaultYPosition, m_Position.second * s_DefaultDimensions.z);
-
-	glm::mat4 modelMatrix(1.0f);
-	modelMatrix = glm::translate(modelMatrix, chunkPosition);
-
-	shaderProgram->SetUniformMatrix4fv("uModelMatrix", modelMatrix);
-
-	m_Mesh.Render();
-}
-
-Collision Chunk::Intersect(const Ray& ray)
-{
-	Collision coll = std::make_tuple(false, glm::vec3(0.0f));
-	float distanceToClosestBlock = 0.0f;
-
-	for (unsigned int x = 0; x < s_DefaultDimensions.x; x++)
+	if (position.x >= 0 && position.x < s_DefaultDimensions.x)
 	{
-		for (unsigned int y = 0; y < s_DefaultDimensions.y; y++)
+		if (position.y >= 0 && position.y < s_DefaultDimensions.y)
 		{
-			for (unsigned int z = 0; z < s_DefaultDimensions.z; z++)
+			if (position.z >= 0 && position.z < s_DefaultDimensions.z)
 			{
-				Block& block = m_Blocks[x][y][z];
-
-				if (block.GetType() != Block::Type::EMPTY)
-				{
-					float distanceToCurrBlock = glm::length(block.m_Position - ray.m_Origin);
-
-					if (ray.m_Length + 0.5f >= distanceToCurrBlock)
-					{
-						if (block.Intersect(ray))
-						{
-							if (!std::get<0>(coll) || distanceToCurrBlock < distanceToClosestBlock)
-							{
-								coll = std::make_tuple(true, block.m_Position);
-
-								distanceToClosestBlock = distanceToCurrBlock;
-							}
-						}
-					}
-				}
+				return true;
 			}
 		}
 	}
 
-	return coll;
-}
-
-void Chunk::Clear()
-{
-	if (m_Blocks)
-	{
-		for (unsigned int i = 0; i < s_DefaultDimensions.x; i++)
-		{
-			for (unsigned int j = 0; j < s_DefaultDimensions.y; j++)
-			{
-				delete[] m_Blocks[i][j];
-			}
-
-			delete[] m_Blocks[i];
-		}
-
-		delete[] m_Blocks;
-	}
+	return false;
 }
 
 glm::ivec3 Chunk::GetNextLocalBlockPosition(const glm::ivec3& position, const glm::ivec3& direction)

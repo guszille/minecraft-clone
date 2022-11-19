@@ -21,16 +21,17 @@ public:
 	void InsertChunk(const Chunk& chunk);
 	void RemoveChunkAt(const std::pair<int, int>& position);
 
-	void InsertChunkBlockAt(const Chunk& chunk, const Block& block, const glm::ivec3& position);
-	void RemoveChunkBlockAt(const Chunk& chunk, const glm::ivec3& position);
+	void InsertBlockAt(const std::pair<int, int>& chunkPosition, const Block& block, const glm::ivec3& blockPosition);
+	void RemoveBlockAt(const std::pair<int, int>& chunkPosition, const glm::ivec3& blockPosition);
 
 	Chunk& GetChunkAt(const std::pair<int, int>& position);
 
 	void GenerateMeshes();
+	void UpdateChunkMesh(const std::pair<int, int>& chunkPosition);
 
 	void Render(Shader* shaderProgram);
 
-	void CastRay(const glm::vec3& origin, const glm::vec3& direction, float length);
+	Intersection CastRay(const glm::vec3& origin, const glm::vec3& direction, float length);
 
 private:
 	std::map<std::pair<int, int>, Chunk> m_Chunks;

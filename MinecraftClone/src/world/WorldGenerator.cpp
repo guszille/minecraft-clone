@@ -8,10 +8,13 @@ void WorldGenerator::Execute(World* world, const std::pair<int, int>& origin, in
 	unsigned int maxYPosition = Chunk::s_DefaultDimensions.y / 2;
 
 	s_NoiseGenerator.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+	s_NoiseGenerator.SetSeed(std::rand());
 
-	for (int i = origin.first - stride; i <= stride; i++)
+	// FIXME: Generate noise values before iterate over the blocks.
+
+	for (int i = origin.first - stride; i <= origin.first + stride; i++)
 	{
-		for (int j = origin.second - stride; j <= stride; j++)
+		for (int j = origin.second - stride; j <= origin.second + stride; j++)
 		{
 			std::pair<int, int> chunkPosition(i, j);
 			Chunk chunk(chunkPosition);

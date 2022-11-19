@@ -4,7 +4,15 @@
 
 #include <glm/glm.hpp>
 
-typedef std::tuple<bool, glm::vec3> Collision;
+// An intersection can be defined by:
+// 
+//		- If it ocurred; and
+//		- The position of the intersected chunk; and
+//		- The position of the intersected block, inside the chunk (local position); and
+//		- The block's global position on the world; and
+//		- The block's intersected face.
+//
+typedef std::tuple<bool, std::pair<int, int>, glm::ivec3, glm::vec3, int> Intersection;
 
 class Ray
 {

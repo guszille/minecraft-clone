@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <iostream>
 
 #include <glm/glm.hpp>
 
@@ -29,7 +30,7 @@ public:
 	Block::Type GetType();
 	const std::array<glm::vec2, 4>& GetTexCoords();
 
-	bool Intersect(const Ray& ray);
+	std::pair<bool, int> Intersect(const Ray& ray);
 
 private:
 	Block::Type m_Type;

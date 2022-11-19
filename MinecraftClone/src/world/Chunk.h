@@ -32,17 +32,22 @@ public:
 	Block& GetBlockAt(const glm::ivec3& position);
 
 	void GenerateMesh(Chunk* chunksArround[4]);
-	void UpdateMesh();
+	void UpdateMesh(Chunk* chunksArround[4]);
 
 	void Render(Shader* shaderProgram);
 
-	Collision Intersect(const Ray& ray);
+	Intersection Intersect(const Ray& ray);
 
 	void Clear();
+
+	static bool IsAValidPosition(const glm::ivec3& position);
+	static glm::ivec3 GetNextLocalBlockPosition(const glm::ivec3& position, const glm::ivec3& direction);
 
 private:
 	Block*** m_Blocks;
 	Mesh m_Mesh;
 
-	static glm::ivec3 GetNextLocalBlockPosition(const glm::ivec3& position, const glm::ivec3& direction);
+	glm::vec3 m_DebugColor;
+
+	void SampleRenderableFaces(Chunk* chunksArround[4]);
 };
