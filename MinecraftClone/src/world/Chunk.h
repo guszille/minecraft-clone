@@ -42,6 +42,7 @@ public:
 
 	static bool IsAValidPosition(const glm::ivec3& position);
 	static glm::ivec3 GetNextLocalBlockPosition(const glm::ivec3& position, const glm::ivec3& direction);
+	static std::pair<int, int> GetChunkPositionFromWorld(const glm::vec3& position);
 
 private:
 	Block*** m_Blocks;

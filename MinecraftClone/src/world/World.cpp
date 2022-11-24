@@ -33,6 +33,18 @@ Chunk& World::GetChunkAt(const std::pair<int, int>& position)
 	return m_Chunks.at(position);
 }
 
+Chunk* World::GetChunkIfExists(const std::pair<int, int>& position)
+{
+	std::map<std::pair<int, int>, Chunk>::iterator it = m_Chunks.find(position);
+
+	if (it != m_Chunks.end())
+	{
+		return &it->second;
+	}
+
+	return nullptr;
+}
+
 void World::GenerateMeshes()
 {
 	std::map<std::pair<int, int>, Chunk>::iterator it;
@@ -57,20 +69,24 @@ void World::GenerateMeshes()
 
 void World::UpdateChunkMesh(const std::pair<int, int>& chunkPosition)
 {
-	Chunk& chunk = m_Chunks.at(chunkPosition);
-	Chunk* chunksArround[4];
+	Chunk* chunk = GetChunkIfExists(chunkPosition);
 
-	std::pair<int, int> p0 = { chunk.m_Position.first, chunk.m_Position.second + 1 }; // front
-	std::pair<int, int> p1 = { chunk.m_Position.first, chunk.m_Position.second - 1 }; // back
-	std::pair<int, int> p2 = { chunk.m_Position.first + 1, chunk.m_Position.second }; // right
-	std::pair<int, int> p3 = { chunk.m_Position.first - 1, chunk.m_Position.second }; // left
+	if (chunk)
+	{
+		Chunk* chunksArround[4];
 
-	chunksArround[0] = GetChunkIfExists(p0);
-	chunksArround[1] = GetChunkIfExists(p1);
-	chunksArround[2] = GetChunkIfExists(p2);
-	chunksArround[3] = GetChunkIfExists(p3);
+		std::pair<int, int> p0 = { chunk->m_Position.first, chunk->m_Position.second + 1 }; // front
+		std::pair<int, int> p1 = { chunk->m_Position.first, chunk->m_Position.second - 1 }; // back
+		std::pair<int, int> p2 = { chunk->m_Position.first + 1, chunk->m_Position.second }; // right
+		std::pair<int, int> p3 = { chunk->m_Position.first - 1, chunk->m_Position.second }; // left
 
-	chunk.UpdateMesh(chunksArround);
+		chunksArround[0] = GetChunkIfExists(p0);
+		chunksArround[1] = GetChunkIfExists(p1);
+		chunksArround[2] = GetChunkIfExists(p2);
+		chunksArround[3] = GetChunkIfExists(p3);
+
+		chunk->UpdateMesh(chunksArround);
+	}
 }
 
 void World::Render(Shader* shaderProgram)
@@ -94,10 +110,7 @@ Intersection World::CastRay(const glm::vec3& origin, const glm::vec3& direction,
 
 	Ray ray(origin, direction, length);
 
-	int chunkXPos = origin.x / Chunk::s_DefaultDimensions.x;
-	int chunkZPos = origin.z / Chunk::s_DefaultDimensions.z;
-
-	std::pair<int, int> p0 = { chunkXPos, chunkZPos }; // Position of the current chunk.
+	std::pair<int, int> p0 = Chunk::GetChunkPositionFromWorld(origin);
 	std::pair<int, int> p1 = { p0.first - 1, p0.second + 1 };
 	std::pair<int, int> p2 = { p0.first, p0.second + 1 };
 	std::pair<int, int> p3 = { p0.first + 1, p0.second + 1 };
@@ -139,16 +152,4 @@ Intersection World::CastRay(const glm::vec3& origin, const glm::vec3& direction,
 	}
 
 	return worldIntersection;
-}
-
-Chunk* World::GetChunkIfExists(const std::pair<int, int>& position)
-{
-	std::map<std::pair<int, int>, Chunk>::iterator it = m_Chunks.find(position);
-
-	if (it != m_Chunks.end())
-	{
-		return &it->second;
-	}
-
-	return nullptr;
 }

@@ -4,6 +4,8 @@
 
 #include <glad/glad.h>
 
+#include <glm/glm.hpp>
+
 #if !defined _STB_IMAGE_INCLUDED
 #define _STB_IMAGE_INCLUDED
 
@@ -18,6 +20,8 @@ public:
 
 	void Bind(int unit);
 	void Unbind();
+
+	glm::ivec3 GetSize();
 
 private:
 	unsigned int m_ID;

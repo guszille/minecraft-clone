@@ -102,7 +102,7 @@ Intersection Chunk::Intersect(const Ray& ray)
 				{
 					float distanceToCurrBlock = glm::length(block.m_Position - ray.m_Origin);
 
-					if (ray.m_Length + 0.5f >= distanceToCurrBlock)
+					if (distanceToCurrBlock <= ray.m_Length)
 					{
 						std::pair<bool, int> blockIntersection = block.Intersect(ray);
 
@@ -323,11 +323,30 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							glm::vec3* vertices = Block::s_CubeVertices[i];
 							unsigned int* indices = Block::s_CubeIndices; // Same indices to all block faces.
 
-							const std::array<glm::vec2, 4>& uv = block.GetTexCoords();
+							std::array<glm::vec2, 4> uv = block.GetTexCoords();
 							glm::vec3 c = Block::s_CubeColors[i];
 
 							// FIXME: Using only for debug.
-							c = c * m_DebugColor;
+							// c = c * m_DebugColor;
+
+							if (block.GetType() == Block::Type::GRASS)
+							{
+								if (i == Block::Face::TOP)
+								{
+									c = c * glm::vec3(0.0f, 1.0f, 0.0f);
+								}
+								else
+								{
+									if (i == Block::Face::BOTTOM)
+									{
+										uv = Block::GenerateTexCoords(Block::Type::DIRTY);
+									}
+									else
+									{
+										uv = Block::GenerateTexCoords(Block::Type::GRASS_SIDE);
+									}
+								}
+							}
 
 							glm::vec3 v0 = vertices[0] + (glm::vec3)localBlockPosition;
 							glm::vec3 v1 = vertices[1] + (glm::vec3)localBlockPosition;
@@ -417,4 +436,12 @@ glm::ivec3 Chunk::GetNextLocalBlockPosition(const glm::ivec3& position, const gl
 	nextPosition.z = nextPosition.z % s_DefaultDimensions.z;
 
 	return nextPosition;
+}
+
+std::pair<int, int> Chunk::GetChunkPositionFromWorld(const glm::vec3& position)
+{
+	int x = position.x > 0.0f ? (position.x / s_DefaultDimensions.x) : ((position.x - (s_DefaultDimensions.x - 1)) / s_DefaultDimensions.x);
+	int z = position.z > 0.0f ? (position.z / s_DefaultDimensions.z) : ((position.z - (s_DefaultDimensions.z - 1)) / s_DefaultDimensions.z);
+
+	return std::pair<int, int>(x, z);
 }

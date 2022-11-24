@@ -25,6 +25,7 @@ public:
 	void RemoveBlockAt(const std::pair<int, int>& chunkPosition, const glm::ivec3& blockPosition);
 
 	Chunk& GetChunkAt(const std::pair<int, int>& position);
+	Chunk* GetChunkIfExists(const std::pair<int, int>& position);
 
 	void GenerateMeshes();
 	void UpdateChunkMesh(const std::pair<int, int>& chunkPosition);
@@ -35,6 +36,4 @@ public:
 
 private:
 	std::map<std::pair<int, int>, Chunk> m_Chunks;
-
-	Chunk* GetChunkIfExists(const std::pair<int, int>& position);
 };

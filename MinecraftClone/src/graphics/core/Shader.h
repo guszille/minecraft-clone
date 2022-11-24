@@ -21,6 +21,8 @@ public:
 
 	void SetUniform1i(const char* uniformName, int data);
 
+	void SetUniform3f(const char* uniformName, const glm::vec3& data);
+
 	void SetUniformMatrix4fv(const char* uniformName, const glm::mat4& data);
 
 private:

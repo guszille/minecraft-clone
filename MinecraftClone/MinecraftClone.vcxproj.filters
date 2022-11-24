@@ -57,6 +57,12 @@
     <ClCompile Include="src\util\Ray.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\ui\HUD.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\core\TextRendere.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.h">
@@ -95,9 +101,19 @@
     <ClInclude Include="src\util\Ray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\ui\HUD.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\core\TextRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\block_render_vs.glsl" />
     <None Include="res\shaders\block_render_fs.glsl" />
+    <None Include="res\shaders\ui_render_vs.glsl" />
+    <None Include="res\shaders\ui_render_fs.glsl" />
+    <None Include="res\shaders\text_render_vs.glsl" />
+    <None Include="res\shaders\text_render_fs.glsl" />
   </ItemGroup>
 </Project>

@@ -9,11 +9,14 @@
 
 #include "graphics/core/Shader.h"
 #include "graphics/core/Texture.h"
+#include "graphics/core/TextRenderer.h"
 
 #include "util/Player.h"
 
 #include "world/World.h"
 #include "world/WorldGenerator.h"
+
+#include "ui/HUD.h"
 
 class Application
 {

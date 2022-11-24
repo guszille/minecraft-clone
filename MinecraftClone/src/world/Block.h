@@ -32,10 +32,10 @@ public:
 
 	std::pair<bool, int> Intersect(const Ray& ray);
 
+	static const std::array<glm::vec2, 4>& GenerateTexCoords(Block::Type type);
+
 private:
 	Block::Type m_Type;
 
 	std::array<glm::vec2, 4> m_TexCoords;
-
-	void GenerateTexCoords();
 };

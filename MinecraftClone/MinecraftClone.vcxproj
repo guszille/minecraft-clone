@@ -96,7 +96,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;GLFW\glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;GLFW\glfw3.lib;freetype\freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -113,7 +113,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;GLFW\glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;GLFW\glfw3.lib;freetype\freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -126,7 +126,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;GLFW\glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;GLFW\glfw3.lib;freetype\freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -143,12 +143,14 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;GLFW\glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;GLFW\glfw3.lib;freetype\freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Application.cpp" />
     <ClCompile Include="src\debug\ChunkDebugRenderer.cpp" />
+    <ClCompile Include="src\graphics\core\TextRendere.cpp" />
+    <ClCompile Include="src\ui\HUD.cpp" />
     <ClCompile Include="src\util\Player.cpp" />
     <ClCompile Include="src\util\Ray.cpp" />
     <ClCompile Include="src\world\Chunk.cpp" />
@@ -165,6 +167,8 @@
   <ItemGroup>
     <ClInclude Include="src\Application.h" />
     <ClInclude Include="src\debug\ChunkDebugRenderer.h" />
+    <ClInclude Include="src\graphics\core\TextRenderer.h" />
+    <ClInclude Include="src\ui\HUD.h" />
     <ClInclude Include="src\util\Player.h" />
     <ClInclude Include="src\util\Ray.h" />
     <ClInclude Include="src\world\Chunk.h" />
@@ -179,6 +183,10 @@
   <ItemGroup>
     <None Include="res\shaders\block_render_fs.glsl" />
     <None Include="res\shaders\block_render_vs.glsl" />
+    <None Include="res\shaders\text_render_fs.glsl" />
+    <None Include="res\shaders\text_render_vs.glsl" />
+    <None Include="res\shaders\ui_render_fs.glsl" />
+    <None Include="res\shaders\ui_render_vs.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

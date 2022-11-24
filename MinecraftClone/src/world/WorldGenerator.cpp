@@ -4,8 +4,8 @@ FastNoiseLite WorldGenerator::s_NoiseGenerator;
 
 void WorldGenerator::Execute(World* world, const std::pair<int, int>& origin, int stride)
 {
-	unsigned int minYPosition = 8;
-	unsigned int maxYPosition = Chunk::s_DefaultDimensions.y / 2;
+	int minYPosition = 0;
+	int maxYPosition = Chunk::s_DefaultDimensions.y / 2;
 
 	s_NoiseGenerator.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
 	s_NoiseGenerator.SetSeed(std::rand());
@@ -19,23 +19,32 @@ void WorldGenerator::Execute(World* world, const std::pair<int, int>& origin, in
 			std::pair<int, int> chunkPosition(i, j);
 			Chunk chunk(chunkPosition);
 
-			for (unsigned int x = 0; x < Chunk::s_DefaultDimensions.x; x++)
+			for (int x = 0; x < Chunk::s_DefaultDimensions.x; x++)
 			{
-				for (unsigned int y = 0; y < maxYPosition; y++)
+				for (int y = 0; y < maxYPosition; y++)
 				{
-					for (unsigned int z = 0; z < Chunk::s_DefaultDimensions.z; z++)
+					for (int z = 0; z < Chunk::s_DefaultDimensions.z; z++)
 					{
 						int xWorldPos = x + (i * Chunk::s_DefaultDimensions.x);
 						int yWorldPos = y + Chunk::s_DefaultYPosition;
 						int zWorldPos = z + (j * Chunk::s_DefaultDimensions.z);
 						float noise = s_NoiseGenerator.GetNoise((float)xWorldPos, (float)zWorldPos);
-						unsigned int maxHeight = minYPosition + ((noise + 1.0f) / 2.0f) * maxYPosition;
+						int maxHeight = minYPosition + ((noise + 1.0f) / 2.0f) * maxYPosition;
 
 						if (y <= maxHeight)
 						{
-							glm::ivec3 localBlockPosition(x, y, z);
+							Block::Type blockType = Block::Type::STONE;
 							
-							chunk.InsertBlockAt(Block(Block::Type::DIRTY, glm::vec3(xWorldPos, yWorldPos, zWorldPos)), localBlockPosition);
+							if (y == maxHeight)
+							{
+								blockType = Block::Type::GRASS;
+							}
+							else if (y < maxHeight && y > maxHeight / 2)
+							{
+								blockType = Block::Type::DIRTY;
+							}
+
+							chunk.InsertBlockAt(Block(blockType, glm::vec3(xWorldPos, yWorldPos, zWorldPos)), glm::ivec3(x, y, z));
 						}
 					}
 				}

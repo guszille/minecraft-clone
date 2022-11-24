@@ -92,19 +92,6 @@ int main(int argc, char* argv[])
 
     glViewport(0, 0, g_ScreenWidth, g_ScreenHeight);
 
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    glDepthMask(GL_TRUE); // Allows to enable/disable writing to the depth buffer.
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glEnable(GL_CULL_FACE);
-    glFrontFace(GL_CCW);
-    glCullFace(GL_BACK);
-
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
     g_GameApp.Setup();
 
     while (!glfwWindowShouldClose(window))

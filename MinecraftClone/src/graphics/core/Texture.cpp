@@ -79,3 +79,8 @@ void Texture::Unbind()
 {
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
+
+glm::ivec3 Texture::GetSize()
+{
+	return glm::ivec3(m_Width, m_Height, m_ColorChannels);
+}

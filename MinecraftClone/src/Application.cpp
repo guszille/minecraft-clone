@@ -4,8 +4,12 @@ Player* g_Player;
 World* g_World;
 Shader* g_BlockRenderShader;
 Texture* g_SpriteSheet;
+HUD* g_HUD;
+TextRenderer* g_TextRenderer;
 
 float g_CameraSensitivity = 0.05f;
+float g_NearPlane = 0.1f;
+float g_FarPlane = 1000.0f;
 
 Application::Application(unsigned int screenWidth, unsigned int screenHeight)
 	: m_ScreenWidth(screenWidth), m_ScreenHeight(screenHeight), m_Keys(), m_MouseButtons(), m_MouseButtonsProcessed(), m_CursorAttached(false), m_LastMousePosition(), m_CurrMousePosition()
@@ -15,7 +19,7 @@ Application::Application(unsigned int screenWidth, unsigned int screenHeight)
 	float fieldOfView = 45.0f;
 	float aspectRatio = (float)screenWidth / (float)screenHeight;
 
-	m_ProjectionMatrix = glm::perspective(glm::radians(fieldOfView), aspectRatio, 0.1f, 1000.0f);
+	m_ProjectionMatrix = glm::perspective(glm::radians(fieldOfView), aspectRatio, g_NearPlane, g_FarPlane);
 }
 
 Application::~Application()
@@ -24,14 +28,18 @@ Application::~Application()
 	delete g_World;
 	delete g_BlockRenderShader;
 	delete g_SpriteSheet;
+	delete g_HUD;
+	delete g_TextRenderer;
 }
 
 void Application::Setup()
 {
-	g_Player = new Player(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), 15.0f, 5.0f);
+	g_Player = new Player(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), 15.0f, 7.5f);
 	g_World = new World();
 	g_BlockRenderShader = new Shader("res/shaders/block_render_vs.glsl", "res/shaders/block_render_fs.glsl");
 	g_SpriteSheet = new Texture("res/textures/minecraft_spritesheet.png");
+	g_HUD = new HUD(m_ScreenWidth, m_ScreenHeight);
+	g_TextRenderer = new TextRenderer(m_ScreenWidth, m_ScreenHeight);
 
 	WorldGenerator::Execute(g_World, std::pair<int, int>(0, 0), 8);
 
@@ -40,7 +48,17 @@ void Application::Setup()
 	g_BlockRenderShader->SetUniform1i("uTexture", 0);
 	g_BlockRenderShader->Unbind();
 
-	g_SpriteSheet->Bind(0);
+	g_SpriteSheet->Bind(0); // Keep the main atlas texture on 0 unit position.
+
+	glDepthFunc(GL_LESS);
+	glDepthMask(GL_TRUE);
+
+	glFrontFace(GL_CCW);
+	glCullFace(GL_BACK);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }
 
 void Application::Update(float deltaTime)
@@ -79,7 +97,10 @@ void Application::ProcessInput(float deltaTime)
 
 	if (m_MouseButtons[GLFW_MOUSE_BUTTON_LEFT] && !m_MouseButtonsProcessed[GLFW_MOUSE_BUTTON_LEFT])
 	{
-		Intersection i = g_World->CastRay(g_Player->GetPosition(), g_Player->GetDirection(), g_Player->m_Range);
+		const glm::vec3& playerPosition = g_Player->GetPosition();
+		const glm::vec3& playerDirection = g_Player->GetDirection();
+
+		Intersection i = g_World->CastRay(playerPosition + (playerDirection * g_NearPlane), playerDirection, g_Player->m_Range);
 
 		if (std::get<0>(i))
 		{
@@ -98,31 +119,38 @@ void Application::ProcessInput(float deltaTime)
 				newChunkPosition = { chunkPosition.first + intersectedFaceNormal.x, chunkPosition.second + intersectedFaceNormal.z };
 			}
 
-			g_World->InsertBlockAt(newChunkPosition, Block(Block::Type::DIRTY, newWorldBlockPosition), newLocalBlockPosition);
-			g_World->UpdateChunkMesh(newChunkPosition);
+			Chunk* chunk = g_World->GetChunkIfExists(newChunkPosition);
 
-			if (newLocalBlockPosition.x == 0)
+			if (chunk != nullptr)
 			{
-				g_World->UpdateChunkMesh({ newChunkPosition.first - 1, newChunkPosition.second });
-			}
-			else if (newLocalBlockPosition.x == Chunk::s_DefaultDimensions.x - 1)
-			{
-				g_World->UpdateChunkMesh({ newChunkPosition.first + 1, newChunkPosition.second });
-			}
+				// FIXME: Check if the block position is empty.
+				{
+					g_World->InsertBlockAt(newChunkPosition, Block(Block::Type::DIRTY, newWorldBlockPosition), newLocalBlockPosition);
+					g_World->UpdateChunkMesh(newChunkPosition);					
 
-			if (newLocalBlockPosition.z == 0)
-			{
-				g_World->UpdateChunkMesh({ newChunkPosition.first, newChunkPosition.second - 1 });
-			}
-			else if (newLocalBlockPosition.z == Chunk::s_DefaultDimensions.z - 1)
-			{
-				g_World->UpdateChunkMesh({ newChunkPosition.first, newChunkPosition.second + 1 });
-			}
+					if (newLocalBlockPosition.x == 0)
+					{
+						g_World->UpdateChunkMesh({ newChunkPosition.first - 1, newChunkPosition.second });
+					}
+					else if (newLocalBlockPosition.x == Chunk::s_DefaultDimensions.x - 1)
+					{
+						g_World->UpdateChunkMesh({ newChunkPosition.first + 1, newChunkPosition.second });
+					}
 
-			// FIXME: Debug only.
-			{
-				std::cout << "BLOCK PLACED AT: (" << newWorldBlockPosition.x << ", " << newWorldBlockPosition.y << ", " << newWorldBlockPosition.z << ")" << std::endl;
-				std::cout << "INTERSECTED FACE: " << intersectedFace << std::endl;
+					if (newLocalBlockPosition.z == 0)
+					{
+						g_World->UpdateChunkMesh({ newChunkPosition.first, newChunkPosition.second - 1 });
+					}
+					else if (newLocalBlockPosition.z == Chunk::s_DefaultDimensions.z - 1)
+					{
+						g_World->UpdateChunkMesh({ newChunkPosition.first, newChunkPosition.second + 1 });
+					}
+
+					// FIXME: Debug only.
+					{
+						std::cout << "BLOCK PLACED AT: (" << newWorldBlockPosition.x << ", " << newWorldBlockPosition.y << ", " << newWorldBlockPosition.z << ") - INTERSECTED FACE: " << intersectedFace << std::endl;
+					}
+				}
 			}
 		}
 
@@ -131,7 +159,10 @@ void Application::ProcessInput(float deltaTime)
 
 	if (m_MouseButtons[GLFW_MOUSE_BUTTON_RIGHT] && !m_MouseButtonsProcessed[GLFW_MOUSE_BUTTON_RIGHT])
 	{
-		Intersection i = g_World->CastRay(g_Player->GetPosition(), g_Player->GetDirection(), g_Player->m_Range);
+		const glm::vec3& playerPosition = g_Player->GetPosition();
+		const glm::vec3& playerDirection = g_Player->GetDirection();
+
+		Intersection i = g_World->CastRay(playerPosition + (playerDirection * g_NearPlane), playerDirection, g_Player->m_Range);
 
 		if (std::get<0>(i))
 		{
@@ -164,8 +195,7 @@ void Application::ProcessInput(float deltaTime)
 				glm::vec3 worldBlockPosition = std::get<3>(i);
 				int intersectedFace = std::get<4>(i);
 
-				std::cout << "BLOCK REMOVED AT: (" << worldBlockPosition.x << ", " << worldBlockPosition.y << ", " << worldBlockPosition.z << ")" << std::endl;
-				std::cout << "INTERSECTED FACE: " << intersectedFace << std::endl;
+				std::cout << "BLOCK REMOVED AT: (" << worldBlockPosition.x << ", " << worldBlockPosition.y << ", " << worldBlockPosition.z << ") - INTERSECTED FACE: " << intersectedFace << std::endl;
 			}
 		}
 
@@ -175,12 +205,36 @@ void Application::ProcessInput(float deltaTime)
 
 void Application::Render()
 {
-	g_BlockRenderShader->Bind();
-	g_BlockRenderShader->SetUniformMatrix4fv("uViewMatrix", g_Player->GetViewMatrix());
+	// Render the game.
+	{
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_BLEND);
 
-	g_World->Render(g_BlockRenderShader);
+		g_BlockRenderShader->Bind();
+		g_BlockRenderShader->SetUniformMatrix4fv("uViewMatrix", g_Player->GetViewMatrix());
 
-	g_BlockRenderShader->Unbind();
+		g_World->Render(g_BlockRenderShader);
+
+		g_BlockRenderShader->Unbind();
+	}
+
+	// Render the UI.
+	{
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
+
+		g_HUD->Render();
+
+		// Render any text.
+		{
+			const glm::vec3& position = g_Player->GetPosition();
+			const glm::vec3& direction = g_Player->GetDirection();
+
+			g_TextRenderer->Write("POSITION: (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")", 16.0f, 16.0f, 1.0f, glm::vec3(1.0f));
+			g_TextRenderer->Write("DIRECTION: (" + std::to_string(direction.x) + ", " + std::to_string(direction.y) + ", " + std::to_string(direction.z) + ")", 16.0f, 32.0f, 1.0f, glm::vec3(1.0f));
+		}
+	}
 }
 
 void Application::SetKeyState(int index, bool pressed)

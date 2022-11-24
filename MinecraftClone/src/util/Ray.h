@@ -17,7 +17,7 @@ typedef std::tuple<bool, std::pair<int, int>, glm::ivec3, glm::vec3, int> Inters
 class Ray
 {
 public:
-	glm::vec3 m_Origin, m_Direction;
+	glm::vec3 m_Origin, m_Direction, m_InverseDirection;
 
 	float m_Length;
 
