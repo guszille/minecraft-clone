@@ -109,16 +109,16 @@ std::pair<bool, int> Block::Intersect(const Ray& ray)
 		return std::make_pair(false, -1);
 	}
 
-	if (yMin > tMin) tMin = yMin;
-	if (yMax < tMax) tMax = yMax;
+	if (yMin > tMin) { tMin = yMin; }
+	if (yMax < tMax) { tMax = yMax; }
 
 	if (tMin > zMax || zMin > tMax)
 	{
 		return std::make_pair(false, -1);
 	}
 
-	if (zMin > tMin) tMin = zMin;
-	if (zMax < tMax) tMax = zMax;
+	if (zMin > tMin) { tMin = zMin; }
+	if (zMax < tMax) { tMax = zMax; }
 
 	if (tMin < 0.0f || tMax < 0.0f)
 	{
@@ -143,6 +143,18 @@ std::pair<bool, int> Block::Intersect(const Ray& ray)
 	}
 
 	return intersection;
+}
+
+bool Block::CheckCollision(const AABB& aabb)
+{
+	glm::vec3 bounds[2] = { m_Position - glm::vec3(0.5f), m_Position + glm::vec3(0.5f) };
+	bool axisIntersections[3] = { true, true, true };
+
+	axisIntersections[0] = aabb.m_Min.x <= bounds[1].x && aabb.m_Max.x >= bounds[0].x;
+	axisIntersections[1] = aabb.m_Min.y <= bounds[1].y && aabb.m_Max.y >= bounds[0].y;
+	axisIntersections[2] = aabb.m_Min.z <= bounds[1].z && aabb.m_Max.z >= bounds[0].z;
+
+	return axisIntersections[0] && axisIntersections[1] && axisIntersections[2];
 }
 
 const std::array<glm::vec2, 4>& Block::GenerateTexCoords(Block::Type type)

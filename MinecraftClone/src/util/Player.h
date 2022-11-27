@@ -4,6 +4,8 @@
 
 #include "Camera.h"
 
+#include "../physics/AABB.h"
+
 class Player
 {
 public:
@@ -20,6 +22,10 @@ public:
 
 	void SetPosition(Camera::Direction direction, float deltaTime);
 	void SetDirection(float xOffset, float yOffset);
+
+	void Update(float deltaTime);
+
+	AABB GetAABB();
 
 private:
 	Camera m_Camera;

@@ -33,3 +33,14 @@ void Player::SetDirection(float xOffset, float yOffset)
 {
 	m_Camera.SetDirection(xOffset, yOffset);
 }
+
+void Player::Update(float deltaTime)
+{
+}
+
+AABB Player::GetAABB()
+{
+	const glm::vec3& position = m_Camera.GetPosition();
+
+	return AABB(position, position - glm::vec3(0.5f, 1.5f, 0.5f), position + glm::vec3(0.5f));
+}

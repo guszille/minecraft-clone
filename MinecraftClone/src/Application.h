@@ -14,7 +14,7 @@
 #include "util/Player.h"
 
 #include "world/World.h"
-#include "world/WorldGenerator.h"
+#include "world/NoiseGenerator.h"
 
 #include "ui/HUD.h"
 
@@ -37,6 +37,7 @@ private:
 	unsigned int m_ScreenWidth, m_ScreenHeight;
 	
 	bool m_Keys[1024];
+	bool m_KeysProcessed[1024];
 	bool m_MouseButtons[2];
 	bool m_MouseButtonsProcessed[2];
 	bool m_CursorAttached;

@@ -9,14 +9,18 @@
 #include "../graphics/core/Shader.h"
 #include "../graphics/Mesh.h"
 
-#include "../util/Ray.h"
+#include "../physics/Ray.h"
+#include "../physics/AABB.h"
 
 #include "Block.h"
+#include "NoiseGenerator.h"
 
 class Chunk
 {
 public:
 	std::pair<int, int> m_Position;
+
+	int** m_HeightMap;
 
 	static glm::ivec3 s_DefaultDimensions;
 	static int s_DefaultYPosition;
@@ -26,10 +30,13 @@ public:
 	Chunk(const std::pair<int, int>& position);
 	~Chunk();
 
-	void InsertBlockAt(const Block& block, const glm::ivec3& position);
-	void RemoveBlockAt(const glm::ivec3& position);
+	bool InsertBlockAt(const Block& block, const glm::ivec3& position);
+	bool RemoveBlockAt(const glm::ivec3& position);
 
 	Block& GetBlockAt(const glm::ivec3& position);
+
+	void GenerateHeightMap(int minYPosition = 0);
+	void GenerateBlocks();
 
 	void GenerateMesh(Chunk* chunksArround[4]);
 	void UpdateMesh(Chunk* chunksArround[4]);
@@ -37,6 +44,7 @@ public:
 	void Render(Shader* shaderProgram);
 
 	Intersection Intersect(const Ray& ray);
+	bool CheckCollision(const AABB& aabb, float maxRange);
 
 	void Clear();
 
@@ -46,6 +54,7 @@ public:
 
 private:
 	Block*** m_Blocks;
+
 	Mesh m_Mesh;
 
 	glm::vec3 m_DebugColor;

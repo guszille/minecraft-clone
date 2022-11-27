@@ -34,7 +34,7 @@ Application g_GameApp(g_ScreenWidth, g_ScreenHeight);
 
 void showFramesPerSecond(GLFWwindow* window)
 {
-    g_CurrTime = glfwGetTime();
+    g_CurrTime = (float)glfwGetTime();
     g_FramesCounter += 1;
 
     float diff = g_CurrTime - g_LastTime;
@@ -92,11 +92,21 @@ int main(int argc, char* argv[])
 
     glViewport(0, 0, g_ScreenWidth, g_ScreenHeight);
 
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
+
+    glFrontFace(GL_CCW);
+    glCullFace(GL_BACK);
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
     g_GameApp.Setup();
 
     while (!glfwWindowShouldClose(window))
     {
-        float currentFrame = glfwGetTime();
+        float currentFrame = (float)glfwGetTime();
 
         g_DeltaTime = currentFrame - g_LastFrame;
         g_LastFrame = currentFrame;
@@ -166,5 +176,5 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 
 void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
 {
-    g_GameApp.SetMousePosition(xpos, ypos);
+    g_GameApp.SetMousePosition((float)xpos, (float)ypos);
 }

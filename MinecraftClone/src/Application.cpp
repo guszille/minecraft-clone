@@ -7,14 +7,16 @@ Texture* g_SpriteSheet;
 HUD* g_HUD;
 TextRenderer* g_TextRenderer;
 
-float g_CameraSensitivity = 0.05f;
 float g_NearPlane = 0.1f;
 float g_FarPlane = 1000.0f;
+float g_CameraSensitivity = 0.05f;
+
+int g_RenderDistance = 8; // In chunks.
 
 Application::Application(unsigned int screenWidth, unsigned int screenHeight)
-	: m_ScreenWidth(screenWidth), m_ScreenHeight(screenHeight), m_Keys(), m_MouseButtons(), m_MouseButtonsProcessed(), m_CursorAttached(false), m_LastMousePosition(), m_CurrMousePosition()
+	: m_ScreenWidth(screenWidth), m_ScreenHeight(screenHeight), m_Keys(), m_KeysProcessed(), m_MouseButtons(), m_MouseButtonsProcessed(), m_CursorAttached(false), m_LastMousePosition(), m_CurrMousePosition()
 {
-	std::srand(std::time(nullptr)); // Use current time as seed for random generator.
+	std::srand((unsigned int)std::time(nullptr)); // Use current time as seed for random generator.
 
 	float fieldOfView = 45.0f;
 	float aspectRatio = (float)screenWidth / (float)screenHeight;
@@ -35,13 +37,15 @@ Application::~Application()
 void Application::Setup()
 {
 	g_Player = new Player(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), 15.0f, 7.5f);
-	g_World = new World();
+	g_World = new World(std::rand());
 	g_BlockRenderShader = new Shader("res/shaders/block_render_vs.glsl", "res/shaders/block_render_fs.glsl");
 	g_SpriteSheet = new Texture("res/textures/minecraft_spritesheet.png");
 	g_HUD = new HUD(m_ScreenWidth, m_ScreenHeight);
 	g_TextRenderer = new TextRenderer(m_ScreenWidth, m_ScreenHeight);
 
-	WorldGenerator::Execute(g_World, std::pair<int, int>(0, 0), 8);
+	NoiseGenerator::Configure(g_World->GetSeed());
+
+	g_World->Setup(std::pair<int, int>(0, 0), g_RenderDistance);
 
 	g_BlockRenderShader->Bind();
 	g_BlockRenderShader->SetUniformMatrix4fv("uProjectionMatrix", m_ProjectionMatrix);
@@ -49,35 +53,49 @@ void Application::Setup()
 	g_BlockRenderShader->Unbind();
 
 	g_SpriteSheet->Bind(0); // Keep the main atlas texture on 0 unit position.
-
-	glDepthFunc(GL_LESS);
-	glDepthMask(GL_TRUE);
-
-	glFrontFace(GL_CCW);
-	glCullFace(GL_BACK);
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }
 
 void Application::Update(float deltaTime)
 {
+	// FIXME: Improve performance in generating new chunks according to rendering distance.
+	//  
+	// std::pair<int, int> origin = Chunk::GetChunkPositionFromWorld(g_Player->GetPosition());
+	// g_World->Update(origin, g_RenderDistance);
+
+	g_Player->Update(deltaTime);
 }
 
 void Application::ProcessInput(float deltaTime)
 {
-	if (m_Keys[GLFW_KEY_W]) { g_Player->SetPosition(Camera::Direction::FORWARD, deltaTime); }
+	if (m_Keys[GLFW_KEY_W] || m_Keys[GLFW_KEY_S] || m_Keys[GLFW_KEY_D] || m_Keys[GLFW_KEY_A] || m_Keys[GLFW_KEY_LEFT_SHIFT] || m_Keys[GLFW_KEY_LEFT_CONTROL])
+	{
+		if (m_Keys[GLFW_KEY_W]) { g_Player->SetPosition(Camera::Direction::FORWARD, deltaTime); }
 
-	if (m_Keys[GLFW_KEY_S]) { g_Player->SetPosition(Camera::Direction::BACKWARD, deltaTime); }
+		if (m_Keys[GLFW_KEY_S]) { g_Player->SetPosition(Camera::Direction::BACKWARD, deltaTime); }
 
-	if (m_Keys[GLFW_KEY_D]) { g_Player->SetPosition(Camera::Direction::RIGHT, deltaTime); }
+		if (m_Keys[GLFW_KEY_D]) { g_Player->SetPosition(Camera::Direction::RIGHT, deltaTime); }
 
-	if (m_Keys[GLFW_KEY_A]) { g_Player->SetPosition(Camera::Direction::LEFT, deltaTime); }
+		if (m_Keys[GLFW_KEY_A]) { g_Player->SetPosition(Camera::Direction::LEFT, deltaTime); }
 
-	if (m_Keys[GLFW_KEY_LEFT_SHIFT]) { g_Player->SetPosition(Camera::Direction::UP, deltaTime); }
+		if (m_Keys[GLFW_KEY_LEFT_SHIFT]) { g_Player->SetPosition(Camera::Direction::UP, deltaTime); }
 
-	if (m_Keys[GLFW_KEY_LEFT_CONTROL]) { g_Player->SetPosition(Camera::Direction::DOWN, deltaTime); }
+		if (m_Keys[GLFW_KEY_LEFT_CONTROL]) { g_Player->SetPosition(Camera::Direction::DOWN, deltaTime); }
+
+		if (g_World->CheckCollision(g_Player->GetAABB(), 2.0f)) // FIXME: Improve performance.
+		{
+			if (m_Keys[GLFW_KEY_W]) { g_Player->SetPosition(Camera::Direction::BACKWARD, deltaTime); }
+
+			if (m_Keys[GLFW_KEY_S]) { g_Player->SetPosition(Camera::Direction::FORWARD, deltaTime); }
+
+			if (m_Keys[GLFW_KEY_D]) { g_Player->SetPosition(Camera::Direction::LEFT, deltaTime); }
+
+			if (m_Keys[GLFW_KEY_A]) { g_Player->SetPosition(Camera::Direction::RIGHT, deltaTime); }
+
+			if (m_Keys[GLFW_KEY_LEFT_SHIFT]) { g_Player->SetPosition(Camera::Direction::DOWN, deltaTime); }
+
+			if (m_Keys[GLFW_KEY_LEFT_CONTROL]) { g_Player->SetPosition(Camera::Direction::UP, deltaTime); }
+		}
+	}
 
 	if (m_LastMousePosition != m_CurrMousePosition)
 	{
@@ -119,37 +137,26 @@ void Application::ProcessInput(float deltaTime)
 				newChunkPosition = { chunkPosition.first + intersectedFaceNormal.x, chunkPosition.second + intersectedFaceNormal.z };
 			}
 
-			Chunk* chunk = g_World->GetChunkIfExists(newChunkPosition);
-
-			if (chunk != nullptr)
+			if (g_World->InsertBlockAt(newChunkPosition, Block(Block::Type::DIRTY, newWorldBlockPosition), newLocalBlockPosition))
 			{
-				// FIXME: Check if the block position is empty.
+				g_World->UpdateChunkMesh(newChunkPosition);					
+
+				if (newLocalBlockPosition.x == 0)
 				{
-					g_World->InsertBlockAt(newChunkPosition, Block(Block::Type::DIRTY, newWorldBlockPosition), newLocalBlockPosition);
-					g_World->UpdateChunkMesh(newChunkPosition);					
+					g_World->UpdateChunkMesh({ newChunkPosition.first - 1, newChunkPosition.second });
+				}
+				else if (newLocalBlockPosition.x == Chunk::s_DefaultDimensions.x - 1)
+				{
+					g_World->UpdateChunkMesh({ newChunkPosition.first + 1, newChunkPosition.second });
+				}
 
-					if (newLocalBlockPosition.x == 0)
-					{
-						g_World->UpdateChunkMesh({ newChunkPosition.first - 1, newChunkPosition.second });
-					}
-					else if (newLocalBlockPosition.x == Chunk::s_DefaultDimensions.x - 1)
-					{
-						g_World->UpdateChunkMesh({ newChunkPosition.first + 1, newChunkPosition.second });
-					}
-
-					if (newLocalBlockPosition.z == 0)
-					{
-						g_World->UpdateChunkMesh({ newChunkPosition.first, newChunkPosition.second - 1 });
-					}
-					else if (newLocalBlockPosition.z == Chunk::s_DefaultDimensions.z - 1)
-					{
-						g_World->UpdateChunkMesh({ newChunkPosition.first, newChunkPosition.second + 1 });
-					}
-
-					// FIXME: Debug only.
-					{
-						std::cout << "BLOCK PLACED AT: (" << newWorldBlockPosition.x << ", " << newWorldBlockPosition.y << ", " << newWorldBlockPosition.z << ") - INTERSECTED FACE: " << intersectedFace << std::endl;
-					}
+				if (newLocalBlockPosition.z == 0)
+				{
+					g_World->UpdateChunkMesh({ newChunkPosition.first, newChunkPosition.second - 1 });
+				}
+				else if (newLocalBlockPosition.z == Chunk::s_DefaultDimensions.z - 1)
+				{
+					g_World->UpdateChunkMesh({ newChunkPosition.first, newChunkPosition.second + 1 });
 				}
 			}
 		}
@@ -169,33 +176,27 @@ void Application::ProcessInput(float deltaTime)
 			std::pair<int, int> chunkPosition = std::get<1>(i);
 			glm::ivec3 localBlockPosition = std::get<2>(i);
 
-			g_World->RemoveBlockAt(chunkPosition, localBlockPosition);
-			g_World->UpdateChunkMesh(chunkPosition);
+			if (g_World->RemoveBlockAt(chunkPosition, localBlockPosition))
+			{
+				g_World->UpdateChunkMesh(chunkPosition);
 
-			if (localBlockPosition.x == 0)
-			{
-				g_World->UpdateChunkMesh({ chunkPosition.first - 1, chunkPosition.second });
-			}
-			else if (localBlockPosition.x == Chunk::s_DefaultDimensions.x - 1)
-			{
-				g_World->UpdateChunkMesh({ chunkPosition.first + 1, chunkPosition.second });
-			}
+				if (localBlockPosition.x == 0)
+				{
+					g_World->UpdateChunkMesh({ chunkPosition.first - 1, chunkPosition.second });
+				}
+				else if (localBlockPosition.x == Chunk::s_DefaultDimensions.x - 1)
+				{
+					g_World->UpdateChunkMesh({ chunkPosition.first + 1, chunkPosition.second });
+				}
 
-			if (localBlockPosition.z == 0)
-			{
-				g_World->UpdateChunkMesh({ chunkPosition.first, chunkPosition.second - 1 });
-			}
-			else if (localBlockPosition.z == Chunk::s_DefaultDimensions.z - 1)
-			{
-				g_World->UpdateChunkMesh({ chunkPosition.first, chunkPosition.second + 1 });
-			}
-
-			// FIXME: Debug only.
-			{
-				glm::vec3 worldBlockPosition = std::get<3>(i);
-				int intersectedFace = std::get<4>(i);
-
-				std::cout << "BLOCK REMOVED AT: (" << worldBlockPosition.x << ", " << worldBlockPosition.y << ", " << worldBlockPosition.z << ") - INTERSECTED FACE: " << intersectedFace << std::endl;
+				if (localBlockPosition.z == 0)
+				{
+					g_World->UpdateChunkMesh({ chunkPosition.first, chunkPosition.second - 1 });
+				}
+				else if (localBlockPosition.z == Chunk::s_DefaultDimensions.z - 1)
+				{
+					g_World->UpdateChunkMesh({ chunkPosition.first, chunkPosition.second + 1 });
+				}
 			}
 		}
 
@@ -207,10 +208,6 @@ void Application::Render()
 {
 	// Render the game.
 	{
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);
-		glEnable(GL_BLEND);
-
 		g_BlockRenderShader->Bind();
 		g_BlockRenderShader->SetUniformMatrix4fv("uViewMatrix", g_Player->GetViewMatrix());
 
@@ -221,18 +218,18 @@ void Application::Render()
 
 	// Render the UI.
 	{
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_CULL_FACE);
-
 		g_HUD->Render();
-
+	
 		// Render any text.
 		{
-			const glm::vec3& position = g_Player->GetPosition();
-			const glm::vec3& direction = g_Player->GetDirection();
+			const glm::vec3& playerPosition = g_Player->GetPosition();
+			const glm::vec3& playerDirection = g_Player->GetDirection();
 
-			g_TextRenderer->Write("POSITION: (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")", 16.0f, 16.0f, 1.0f, glm::vec3(1.0f));
-			g_TextRenderer->Write("DIRECTION: (" + std::to_string(direction.x) + ", " + std::to_string(direction.y) + ", " + std::to_string(direction.z) + ")", 16.0f, 32.0f, 1.0f, glm::vec3(1.0f));
+			std::string debugText1 = "POSITION: (" + std::to_string(playerPosition.x) + ", " + std::to_string(playerPosition.y) + ", " + std::to_string(playerPosition.z) + ")";
+			std::string debugText2 = "DIRECTION: (" + std::to_string(playerDirection.x) + ", " + std::to_string(playerDirection.y) + ", " + std::to_string(playerDirection.z) + ")";
+
+			g_TextRenderer->Write(debugText1, 16.0f, 16.0f, 1.0f, glm::vec3(1.0f));
+			g_TextRenderer->Write(debugText2, 16.0f, 32.0f, 1.0f, glm::vec3(1.0f));
 		}
 	}
 }
@@ -240,6 +237,7 @@ void Application::Render()
 void Application::SetKeyState(int index, bool pressed)
 {
 	m_Keys[index] = pressed;
+	m_KeysProcessed[index] = false;
 }
 
 void Application::SetMouseButtonState(int index, bool pressed)

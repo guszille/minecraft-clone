@@ -150,9 +150,10 @@
     <ClCompile Include="src\Application.cpp" />
     <ClCompile Include="src\debug\ChunkDebugRenderer.cpp" />
     <ClCompile Include="src\graphics\core\TextRendere.cpp" />
+    <ClCompile Include="src\physics\AABB.cpp" />
     <ClCompile Include="src\ui\HUD.cpp" />
     <ClCompile Include="src\util\Player.cpp" />
-    <ClCompile Include="src\util\Ray.cpp" />
+    <ClCompile Include="src\physics\Ray.cpp" />
     <ClCompile Include="src\world\Chunk.cpp" />
     <ClCompile Include="src\graphics\Mesh.cpp" />
     <ClCompile Include="src\world\Block.cpp" />
@@ -160,25 +161,26 @@
     <ClCompile Include="src\graphics\core\Shader.cpp" />
     <ClCompile Include="src\graphics\core\Texture.cpp" />
     <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\world\NoiseGenerator.cpp" />
     <ClCompile Include="src\world\World.cpp" />
     <ClCompile Include="src\vendor\src\glad.c" />
-    <ClCompile Include="src\world\WorldGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.h" />
     <ClInclude Include="src\debug\ChunkDebugRenderer.h" />
     <ClInclude Include="src\graphics\core\TextRenderer.h" />
+    <ClInclude Include="src\physics\AABB.h" />
     <ClInclude Include="src\ui\HUD.h" />
     <ClInclude Include="src\util\Player.h" />
-    <ClInclude Include="src\util\Ray.h" />
+    <ClInclude Include="src\physics\Ray.h" />
     <ClInclude Include="src\world\Chunk.h" />
     <ClInclude Include="src\graphics\Mesh.h" />
     <ClInclude Include="src\world\Block.h" />
     <ClInclude Include="src\util\Camera.h" />
     <ClInclude Include="src\graphics\core\Shader.h" />
     <ClInclude Include="src\graphics\core\Texture.h" />
+    <ClInclude Include="src\world\NoiseGenerator.h" />
     <ClInclude Include="src\world\World.h" />
-    <ClInclude Include="src\world\WorldGenerator.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\block_render_fs.glsl" />

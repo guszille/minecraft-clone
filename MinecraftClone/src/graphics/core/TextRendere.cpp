@@ -82,6 +82,7 @@ void TextRenderer::Write(std::string text, float x, float y, float scale, glm::v
     m_TextRenderShader.Bind();
     m_TextRenderShader.SetUniform3f("uTextColor", color);
 
+    glEnable(GL_BLEND);
     glBindVertexArray(m_VAO);
     glActiveTexture(GL_TEXTURE0 + 8); // Keep on unit number 8.
 
@@ -125,6 +126,7 @@ void TextRenderer::Write(std::string text, float x, float y, float scale, glm::v
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
+    glDisable(GL_BLEND);
 
     m_TextRenderShader.Unbind();
 }

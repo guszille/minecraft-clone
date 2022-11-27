@@ -1,11 +1,11 @@
 #pragma once
 
 #include <array>
-#include <iostream>
 
 #include <glm/glm.hpp>
 
-#include "../util/Ray.h"
+#include "../physics/Ray.h"
+#include "../physics/AABB.h"
 
 class Block
 {
@@ -31,6 +31,7 @@ public:
 	const std::array<glm::vec2, 4>& GetTexCoords();
 
 	std::pair<bool, int> Intersect(const Ray& ray);
+	bool CheckCollision(const AABB& aabb);
 
 	static const std::array<glm::vec2, 4>& GenerateTexCoords(Block::Type type);
 

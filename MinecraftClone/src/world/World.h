@@ -2,12 +2,17 @@
 
 #include <map>
 #include <tuple>
+#include <array>
+#include <thread>
+
+#include <glad/glad.h>
 
 #include <glm/glm.hpp>
 
 #include "../graphics/core/Shader.h"
 
-#include "../util/Ray.h"
+#include "../physics/Ray.h"
+#include "../physics/AABB.h"
 
 #include "Block.h"
 #include "Chunk.h"
@@ -15,25 +20,31 @@
 class World
 {
 public:
-	World();
+	World(int seed);
 	~World();
 
+	int GetSeed();
+
 	void InsertChunk(const Chunk& chunk);
-	void RemoveChunkAt(const std::pair<int, int>& position);
+	void RemoveChunk(const std::pair<int, int>& position);
 
-	void InsertBlockAt(const std::pair<int, int>& chunkPosition, const Block& block, const glm::ivec3& blockPosition);
-	void RemoveBlockAt(const std::pair<int, int>& chunkPosition, const glm::ivec3& blockPosition);
+	bool InsertBlockAt(const std::pair<int, int>& chunkPosition, const Block& block, const glm::ivec3& blockPosition);
+	bool RemoveBlockAt(const std::pair<int, int>& chunkPosition, const glm::ivec3& blockPosition);
 
-	Chunk& GetChunkAt(const std::pair<int, int>& position);
-	Chunk* GetChunkIfExists(const std::pair<int, int>& position);
+	void Setup(const std::pair<int, int>& origin, int stride);
+	void Update(const std::pair<int, int>& origin, int stride);
+	void Render(Shader* shaderProgram);
 
 	void GenerateMeshes();
 	void UpdateChunkMesh(const std::pair<int, int>& chunkPosition);
 
-	void Render(Shader* shaderProgram);
-
 	Intersection CastRay(const glm::vec3& origin, const glm::vec3& direction, float length);
+	bool CheckCollision(const AABB& aabb, float maxRange);
 
 private:
+	int m_Seed;
+
 	std::map<std::pair<int, int>, Chunk> m_Chunks;
+
+	Chunk* GetChunkIfExists(const std::pair<int, int>& position);
 };

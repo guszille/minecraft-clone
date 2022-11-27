@@ -4,20 +4,27 @@ glm::ivec3 Chunk::s_DefaultDimensions(16, 256, 16);
 int Chunk::s_DefaultYPosition = -128;
 
 Chunk::Chunk()
-	: m_Position(), m_Blocks(nullptr), m_DebugColor()
+	: m_Position(), m_HeightMap(nullptr), m_Blocks(nullptr), m_DebugColor()
 {
 }
 
 Chunk::Chunk(const std::pair<int, int>& position)
 	: m_Position(position), m_DebugColor((float)std::rand() / RAND_MAX, (float)std::rand() / RAND_MAX, (float)std::rand() / RAND_MAX)
 {
+	m_HeightMap = new int*[s_DefaultDimensions.x];
+
+	for (int i = 0; i < s_DefaultDimensions.x; i++)
+	{
+		m_HeightMap[i] = new int[s_DefaultDimensions.z];
+	}
+
 	m_Blocks = new Block**[s_DefaultDimensions.x];
 
-	for (unsigned int i = 0; i < s_DefaultDimensions.x; i++)
+	for (int i = 0; i < s_DefaultDimensions.x; i++)
 	{
 		m_Blocks[i] = new Block*[s_DefaultDimensions.y];
 
-		for (unsigned int j = 0; j < s_DefaultDimensions.y; j++)
+		for (int j = 0; j < s_DefaultDimensions.y; j++)
 		{
 			m_Blocks[i][j] = new Block[s_DefaultDimensions.z];
 		}
@@ -28,20 +35,31 @@ Chunk::~Chunk()
 {
 }
 
-void Chunk::InsertBlockAt(const Block& block, const glm::ivec3& position)
+bool Chunk::InsertBlockAt(const Block& block, const glm::ivec3& position)
 {
 	if (IsAValidPosition(position))
 	{
-		m_Blocks[position.x][position.y][position.z] = block;
+		if (m_Blocks[position.x][position.y][position.z].GetType() == Block::Type::EMPTY)
+		{
+			m_Blocks[position.x][position.y][position.z] = block;
+
+			return true;
+		}
 	}
+
+	return false;
 }
 
-void Chunk::RemoveBlockAt(const glm::ivec3& position)
+bool Chunk::RemoveBlockAt(const glm::ivec3& position)
 {
 	if (IsAValidPosition(position))
 	{
 		m_Blocks[position.x][position.y][position.z] = Block();
+
+		return true;
 	}
+
+	return false;
 }
 
 Block& Chunk::GetBlockAt(const glm::ivec3& position)
@@ -52,6 +70,62 @@ Block& Chunk::GetBlockAt(const glm::ivec3& position)
 	}
 
 	throw("The provided position is out of chunk!");
+}
+
+void Chunk::GenerateHeightMap(int minYPosition)
+{
+	int chunkWorldPosition[3] = { m_Position.first * s_DefaultDimensions.x, s_DefaultYPosition, m_Position.second * s_DefaultDimensions.z };
+	int maxYPosition = (int)((2.0f / 3.0f) * s_DefaultDimensions.y);
+
+	for (int x = 0; x < s_DefaultDimensions.x; x++)
+	{
+		for (int z = 0; z < s_DefaultDimensions.z; z++)
+		{
+			float noise = NoiseGenerator::GetNoise2D((float)(x + chunkWorldPosition[0]), (float)(z + chunkWorldPosition[2]));
+
+			m_HeightMap[x][z] = (int)(minYPosition + ((noise + 1.0f) / 2.0f) * maxYPosition);
+		}
+	}
+}
+
+void Chunk::GenerateBlocks()
+{
+	int chunkWorldPosition[3] = { m_Position.first * s_DefaultDimensions.x, s_DefaultYPosition, m_Position.second * s_DefaultDimensions.z };
+	int maxYPosition = (int)((2.0f / 3.0f) * s_DefaultDimensions.y);
+
+	for (int x = 0; x < s_DefaultDimensions.x; x++)
+	{
+		for (int y = 0; y < maxYPosition; y++)
+		{
+			for (int z = 0; z < s_DefaultDimensions.z; z++)
+			{
+				int xWorldPos = x + chunkWorldPosition[0];
+				int yWorldPos = y + chunkWorldPosition[1];
+				int zWorldPos = z + chunkWorldPosition[2];
+				int maxHeight = m_HeightMap[x][z];
+
+				if (y <= maxHeight)
+				{
+					Block::Type blockType = Block::Type::EMPTY;
+
+					if (y == maxHeight)
+					{
+						blockType = Block::Type::GRASS;
+					}
+					else if (y < maxHeight && y >= maxHeight / 2)
+					{
+						blockType = Block::Type::DIRTY;
+					}
+					else if (y < maxHeight / 2)
+					{
+						blockType = Block::Type::STONE;
+					}
+
+					InsertBlockAt(Block(blockType, glm::vec3(xWorldPos, yWorldPos, zWorldPos)), glm::ivec3(x, y, z));
+				}
+			}
+		}
+	}
 }
 
 void Chunk::GenerateMesh(Chunk* chunksArround[4])
@@ -90,11 +164,11 @@ Intersection Chunk::Intersect(const Ray& ray)
 	Intersection intersection = std::make_tuple(false, std::make_pair(0, 0), glm::ivec3(0), glm::vec3(0.0f), -1);
 	float distanceToClosestBlock = 0.0f;
 
-	for (unsigned int x = 0; x < s_DefaultDimensions.x; x++)
+	for (int x = 0; x < s_DefaultDimensions.x; x++)
 	{
-		for (unsigned int y = 0; y < s_DefaultDimensions.y; y++)
+		for (int y = 0; y < s_DefaultDimensions.y; y++)
 		{
-			for (unsigned int z = 0; z < s_DefaultDimensions.z; z++)
+			for (int z = 0; z < s_DefaultDimensions.z; z++)
 			{
 				Block& block = m_Blocks[x][y][z];
 
@@ -124,13 +198,50 @@ Intersection Chunk::Intersect(const Ray& ray)
 	return intersection;
 }
 
+bool Chunk::CheckCollision(const AABB& aabb, float maxRange)
+{
+	for (int x = 0; x < s_DefaultDimensions.x; x++)
+	{
+		for (int y = 0; y < s_DefaultDimensions.y; y++)
+		{
+			for (int z = 0; z < s_DefaultDimensions.z; z++)
+			{
+				Block& block = m_Blocks[x][y][z];
+
+				if (block.GetType() != Block::Type::EMPTY)
+				{
+					if (glm::length(block.m_Position - aabb.m_Origin) <= maxRange)
+					{
+						if (block.CheckCollision(aabb))
+						{
+							return true;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
 void Chunk::Clear()
 {
+	if (m_HeightMap)
+	{
+		for (int i = 0; i < s_DefaultDimensions.x; i++)
+		{
+			delete m_HeightMap[i];
+		}
+
+		delete m_HeightMap;
+	}
+
 	if (m_Blocks)
 	{
-		for (unsigned int i = 0; i < s_DefaultDimensions.x; i++)
+		for (int i = 0; i < s_DefaultDimensions.x; i++)
 		{
-			for (unsigned int j = 0; j < s_DefaultDimensions.y; j++)
+			for (int j = 0; j < s_DefaultDimensions.y; j++)
 			{
 				delete[] m_Blocks[i][j];
 			}
@@ -146,11 +257,11 @@ void Chunk::Clear()
 
 void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 {
-	for (unsigned int x = 0; x < s_DefaultDimensions.x; x++)
+	for (int x = 0; x < s_DefaultDimensions.x; x++)
 	{
-		for (unsigned int y = 0; y < s_DefaultDimensions.y; y++)
+		for (int y = 0; y < s_DefaultDimensions.y; y++)
 		{
-			for (unsigned int z = 0; z < s_DefaultDimensions.z; z++)
+			for (int z = 0; z < s_DefaultDimensions.z; z++)
 			{
 				Block& block = m_Blocks[x][y][z];
 				glm::ivec3 localBlockPosition(x, y, z);
@@ -440,8 +551,8 @@ glm::ivec3 Chunk::GetNextLocalBlockPosition(const glm::ivec3& position, const gl
 
 std::pair<int, int> Chunk::GetChunkPositionFromWorld(const glm::vec3& position)
 {
-	int x = position.x > 0.0f ? (position.x / s_DefaultDimensions.x) : ((position.x - (s_DefaultDimensions.x - 1)) / s_DefaultDimensions.x);
-	int z = position.z > 0.0f ? (position.z / s_DefaultDimensions.z) : ((position.z - (s_DefaultDimensions.z - 1)) / s_DefaultDimensions.z);
+	int x = position.x > 0.0f ? (int)(position.x / s_DefaultDimensions.x) : (int)((position.x - (s_DefaultDimensions.x - 1)) / s_DefaultDimensions.x);
+	int z = position.z > 0.0f ? (int)(position.z / s_DefaultDimensions.z) : (int)((position.z - (s_DefaultDimensions.z - 1)) / s_DefaultDimensions.z);
 
 	return std::pair<int, int>(x, z);
 }
