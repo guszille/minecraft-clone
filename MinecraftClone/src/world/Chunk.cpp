@@ -2,33 +2,18 @@
 
 glm::ivec3 Chunk::s_DefaultDimensions(16, 256, 16);
 int Chunk::s_DefaultYPosition = -128;
-
-Chunk::Chunk()
-	: m_Position(), m_HeightMap(nullptr), m_Blocks(nullptr), m_DebugColor()
-{
-}
+int Chunk::s_DefaultLayerSize = 8;
 
 Chunk::Chunk(const std::pair<int, int>& position)
 	: m_Position(position), m_DebugColor((float)std::rand() / RAND_MAX, (float)std::rand() / RAND_MAX, (float)std::rand() / RAND_MAX)
 {
 	m_HeightMap = new int*[s_DefaultDimensions.x];
 
-	for (int i = 0; i < s_DefaultDimensions.x; i++)
-	{
-		m_HeightMap[i] = new int[s_DefaultDimensions.z];
-	}
+	for (int i = 0; i < s_DefaultDimensions.x; i++) { m_HeightMap[i] = new int[s_DefaultDimensions.z]; }
 
 	m_Blocks = new Block**[s_DefaultDimensions.x];
 
-	for (int i = 0; i < s_DefaultDimensions.x; i++)
-	{
-		m_Blocks[i] = new Block*[s_DefaultDimensions.y];
-
-		for (int j = 0; j < s_DefaultDimensions.y; j++)
-		{
-			m_Blocks[i][j] = new Block[s_DefaultDimensions.z];
-		}
-	}
+	for (int i = 0; i < s_DefaultDimensions.x; i++) { m_Blocks[i] = new Block*[s_DefaultDimensions.y]; for (int j = 0; j < s_DefaultDimensions.y; j++) { m_Blocks[i][j] = new Block[s_DefaultDimensions.z]; } }
 }
 
 Chunk::~Chunk()
@@ -39,7 +24,7 @@ bool Chunk::InsertBlockAt(const Block& block, const glm::ivec3& position)
 {
 	if (IsAValidPosition(position))
 	{
-		if (m_Blocks[position.x][position.y][position.z].GetType() == Block::Type::EMPTY)
+		if (m_Blocks[position.x][position.y][position.z].GetType() == BlockType::EMPTY)
 		{
 			m_Blocks[position.x][position.y][position.z] = block;
 
@@ -106,19 +91,19 @@ void Chunk::GenerateBlocks()
 
 				if (y <= maxHeight)
 				{
-					Block::Type blockType = Block::Type::EMPTY;
+					BlockType blockType = BlockType::EMPTY;
 
 					if (y == maxHeight)
 					{
-						blockType = Block::Type::GRASS;
+						blockType = BlockType::GRASS;
 					}
 					else if (y < maxHeight && y >= maxHeight / 2)
 					{
-						blockType = Block::Type::DIRTY;
+						blockType = BlockType::DIRTY;
 					}
 					else if (y < maxHeight / 2)
 					{
-						blockType = Block::Type::STONE;
+						blockType = BlockType::STONE;
 					}
 
 					InsertBlockAt(Block(blockType, glm::vec3(xWorldPos, yWorldPos, zWorldPos)), glm::ivec3(x, y, z));
@@ -143,7 +128,7 @@ void Chunk::UpdateMesh(Chunk* chunksArround[4])
 	m_Mesh.m_NumberOfFaces = 0;
 
 	SampleRenderableFaces(chunksArround);
-	
+
 	m_Mesh.UpdateRenderData();
 }
 
@@ -172,7 +157,7 @@ Intersection Chunk::Intersect(const Ray& ray)
 			{
 				Block& block = m_Blocks[x][y][z];
 
-				if (block.GetType() != Block::Type::EMPTY)
+				if (block.GetType() != BlockType::EMPTY)
 				{
 					float distanceToCurrBlock = glm::length(block.m_Position - ray.m_Origin);
 
@@ -200,21 +185,28 @@ Intersection Chunk::Intersect(const Ray& ray)
 
 bool Chunk::CheckCollision(const AABB& aabb, float maxRange)
 {
+	int aabbChunkLayer = GetChunkLayerFromWorld(aabb.m_Origin);
+
 	for (int x = 0; x < s_DefaultDimensions.x; x++)
 	{
 		for (int y = 0; y < s_DefaultDimensions.y; y++)
 		{
-			for (int z = 0; z < s_DefaultDimensions.z; z++)
-			{
-				Block& block = m_Blocks[x][y][z];
+			int currentChunkLayer = (int)(y / s_DefaultLayerSize);
 
-				if (block.GetType() != Block::Type::EMPTY)
+			if (currentChunkLayer >= (aabbChunkLayer - 1) && currentChunkLayer <= (aabbChunkLayer + 1))
+			{
+				for (int z = 0; z < s_DefaultDimensions.z; z++)
 				{
-					if (glm::length(block.m_Position - aabb.m_Origin) <= maxRange)
+					Block& block = m_Blocks[x][y][z];
+
+					if (block.GetType() != BlockType::EMPTY)
 					{
-						if (block.CheckCollision(aabb))
+						if (glm::length(block.m_Position - aabb.m_Origin) <= maxRange)
 						{
-							return true;
+							if (block.CheckCollision(aabb))
+							{
+								return true;
+							}
 						}
 					}
 				}
@@ -229,25 +221,14 @@ void Chunk::Clear()
 {
 	if (m_HeightMap)
 	{
-		for (int i = 0; i < s_DefaultDimensions.x; i++)
-		{
-			delete m_HeightMap[i];
-		}
+		for (int i = 0; i < s_DefaultDimensions.x; i++) { delete m_HeightMap[i]; }
 
 		delete m_HeightMap;
 	}
 
 	if (m_Blocks)
 	{
-		for (int i = 0; i < s_DefaultDimensions.x; i++)
-		{
-			for (int j = 0; j < s_DefaultDimensions.y; j++)
-			{
-				delete[] m_Blocks[i][j];
-			}
-
-			delete[] m_Blocks[i];
-		}
+		for (int i = 0; i < s_DefaultDimensions.x; i++) { for (int j = 0; j < s_DefaultDimensions.y; j++) { delete[] m_Blocks[i][j]; } delete[] m_Blocks[i]; }
 
 		delete[] m_Blocks;
 	}
@@ -266,13 +247,13 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 				Block& block = m_Blocks[x][y][z];
 				glm::ivec3 localBlockPosition(x, y, z);
 
-				if (block.GetType() != Block::Type::EMPTY)
+				if (block.GetType() != BlockType::EMPTY)
 				{
 					for (unsigned int i = 0; i < 6; i++) // Iterate over all block faces.
 					{
 						bool faceCanComposeMesh = false;
 
-						if (i == Block::Face::FRONT)
+						if (i == BlockFace::FRONT)
 						{
 							if (localBlockPosition.z == s_DefaultDimensions.z - 1)
 							{
@@ -280,10 +261,10 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 
 								if (chunk != nullptr)
 								{
-									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Block::s_CubeNormals[i]);
+									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Cube::s_Normals[i]);
 									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
-									if (obstructingBlock.GetType() == Block::Type::EMPTY)
+									if (obstructingBlock.GetType() == BlockType::EMPTY)
 									{
 										faceCanComposeMesh = true;
 									}
@@ -295,15 +276,15 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == Block::Type::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY)
 								{
 									faceCanComposeMesh = true;
 								}
 							}
 						}
-						else if (i == Block::Face::BACK)
+						else if (i == BlockFace::BACK)
 						{
 							if (localBlockPosition.z == 0)
 							{
@@ -311,10 +292,10 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 
 								if (chunk != nullptr)
 								{
-									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Block::s_CubeNormals[i]);
+									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Cube::s_Normals[i]);
 									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
-									if (obstructingBlock.GetType() == Block::Type::EMPTY)
+									if (obstructingBlock.GetType() == BlockType::EMPTY)
 									{
 										faceCanComposeMesh = true;
 									}
@@ -326,15 +307,15 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == Block::Type::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY)
 								{
 									faceCanComposeMesh = true;
 								}
 							}
 						}
-						else if (i == Block::Face::RIGHT)
+						else if (i == BlockFace::RIGHT)
 						{
 							if (localBlockPosition.x == s_DefaultDimensions.x - 1)
 							{
@@ -342,10 +323,10 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 
 								if (chunk != nullptr)
 								{
-									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Block::s_CubeNormals[i]);
+									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Cube::s_Normals[i]);
 									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
-									if (obstructingBlock.GetType() == Block::Type::EMPTY)
+									if (obstructingBlock.GetType() == BlockType::EMPTY)
 									{
 										faceCanComposeMesh = true;
 									}
@@ -357,15 +338,15 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == Block::Type::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY)
 								{
 									faceCanComposeMesh = true;
 								}
 							}
 						}
-						else if (i == Block::Face::LEFT)
+						else if (i == BlockFace::LEFT)
 						{
 							if (localBlockPosition.x == 0)
 							{
@@ -373,10 +354,10 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 
 								if (chunk != nullptr)
 								{
-									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Block::s_CubeNormals[i]);
+									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Cube::s_Normals[i]);
 									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
-									if (obstructingBlock.GetType() == Block::Type::EMPTY)
+									if (obstructingBlock.GetType() == BlockType::EMPTY)
 									{
 										faceCanComposeMesh = true;
 									}
@@ -388,15 +369,15 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == Block::Type::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY)
 								{
 									faceCanComposeMesh = true;
 								}
 							}
 						}
-						else if (i == Block::Face::TOP)
+						else if (i == BlockFace::TOP)
 						{
 							if (localBlockPosition.y == s_DefaultDimensions.y - 1)
 							{
@@ -404,15 +385,15 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == Block::Type::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY)
 								{
 									faceCanComposeMesh = true;
 								}
 							}
 						}
-						else if (i == Block::Face::BOTTOM)
+						else if (i == BlockFace::BOTTOM)
 						{
 							if (localBlockPosition.y == 0)
 							{
@@ -420,9 +401,9 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							}
 							else
 							{
-								Block& obstructingBlock = GetBlockAt(localBlockPosition + Block::s_CubeNormals[i]);
+								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == Block::Type::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY)
 								{
 									faceCanComposeMesh = true;
 								}
@@ -431,30 +412,30 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 
 						if (faceCanComposeMesh)
 						{
-							glm::vec3* vertices = Block::s_CubeVertices[i];
-							unsigned int* indices = Block::s_CubeIndices; // Same indices to all block faces.
+							glm::vec3* vertices = Cube::s_Vertices[i];
+							unsigned int* indices = Cube::s_Indices; // Same indices to all block faces.
 
-							std::array<glm::vec2, 4> uv = block.GetTexCoords();
-							glm::vec3 c = Block::s_CubeColors[i];
+							std::array<glm::vec2, 4> uv = Block::GenerateTexCoords(block.GetType());
+							glm::vec3 c = Cube::s_Colors[i];
 
 							// FIXME: Using only for debug.
 							// c = c * m_DebugColor;
 
-							if (block.GetType() == Block::Type::GRASS)
+							if (block.GetType() == BlockType::GRASS)
 							{
-								if (i == Block::Face::TOP)
+								if (i == BlockFace::TOP)
 								{
 									c = c * glm::vec3(0.0f, 1.0f, 0.0f);
 								}
 								else
 								{
-									if (i == Block::Face::BOTTOM)
+									if (i == BlockFace::BOTTOM)
 									{
-										uv = Block::GenerateTexCoords(Block::Type::DIRTY);
+										uv = Block::GenerateTexCoords(BlockType::DIRTY);
 									}
 									else
 									{
-										uv = Block::GenerateTexCoords(Block::Type::GRASS_SIDE);
+										uv = Block::GenerateTexCoords(BlockType::GRASS_SIDE);
 									}
 								}
 							}
@@ -555,4 +536,9 @@ std::pair<int, int> Chunk::GetChunkPositionFromWorld(const glm::vec3& position)
 	int z = position.z > 0.0f ? (int)(position.z / s_DefaultDimensions.z) : (int)((position.z - (s_DefaultDimensions.z - 1)) / s_DefaultDimensions.z);
 
 	return std::pair<int, int>(x, z);
+}
+
+int Chunk::GetChunkLayerFromWorld(const glm::vec3& position)
+{
+	return (int)((position.y - s_DefaultYPosition) / s_DefaultLayerSize);
 }

@@ -92,14 +92,6 @@ int main(int argc, char* argv[])
 
     glViewport(0, 0, g_ScreenWidth, g_ScreenHeight);
 
-    glDepthFunc(GL_LESS);
-    glDepthMask(GL_TRUE);
-
-    glFrontFace(GL_CCW);
-    glCullFace(GL_BACK);
-
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     g_GameApp.Setup();

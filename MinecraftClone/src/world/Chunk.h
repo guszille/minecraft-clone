@@ -24,9 +24,9 @@ public:
 
 	static glm::ivec3 s_DefaultDimensions;
 	static int s_DefaultYPosition;
+	static int s_DefaultLayerSize;
 
 public:
-	Chunk();
 	Chunk(const std::pair<int, int>& position);
 	~Chunk();
 
@@ -51,6 +51,7 @@ public:
 	static bool IsAValidPosition(const glm::ivec3& position);
 	static glm::ivec3 GetNextLocalBlockPosition(const glm::ivec3& position, const glm::ivec3& direction);
 	static std::pair<int, int> GetChunkPositionFromWorld(const glm::vec3& position);
+	static int GetChunkLayerFromWorld(const glm::vec3& position);
 
 private:
 	Block*** m_Blocks;

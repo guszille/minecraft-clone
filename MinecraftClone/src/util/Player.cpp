@@ -24,7 +24,7 @@ const glm::vec3& Player::GetDirection()
 	return m_Camera.GetDirection();
 }
 
-void Player::SetPosition(Camera::Direction direction, float deltaTime)
+void Player::SetPosition(CameraDirection direction, float deltaTime)
 {
 	m_Camera.SetPosition(direction, m_Speed * deltaTime);
 }

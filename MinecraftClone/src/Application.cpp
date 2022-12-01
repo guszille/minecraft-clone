@@ -53,15 +53,27 @@ void Application::Setup()
 	g_BlockRenderShader->Unbind();
 
 	g_SpriteSheet->Bind(0); // Keep the main atlas texture on 0 unit position.
+
+	// Default OpenGL configs.
+	{
+		// GL_DEPTH_TEST
+		glDepthMask(GL_TRUE);
+		glDepthFunc(GL_LESS);
+
+		// GL_CULL_FACE
+		glFrontFace(GL_CCW);
+		glCullFace(GL_BACK);
+
+		// GL_BLEND
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
 }
 
 void Application::Update(float deltaTime)
 {
-	// FIXME: Improve performance in generating new chunks according to rendering distance.
-	//  
-	// std::pair<int, int> origin = Chunk::GetChunkPositionFromWorld(g_Player->GetPosition());
-	// g_World->Update(origin, g_RenderDistance);
+	std::pair<int, int> origin = Chunk::GetChunkPositionFromWorld(g_Player->GetPosition());
 
+	g_World->Update(origin, g_RenderDistance, deltaTime);
 	g_Player->Update(deltaTime);
 }
 
@@ -69,31 +81,21 @@ void Application::ProcessInput(float deltaTime)
 {
 	if (m_Keys[GLFW_KEY_W] || m_Keys[GLFW_KEY_S] || m_Keys[GLFW_KEY_D] || m_Keys[GLFW_KEY_A] || m_Keys[GLFW_KEY_LEFT_SHIFT] || m_Keys[GLFW_KEY_LEFT_CONTROL])
 	{
-		if (m_Keys[GLFW_KEY_W]) { g_Player->SetPosition(Camera::Direction::FORWARD, deltaTime); }
+		if (m_Keys[GLFW_KEY_W]) { g_Player->SetPosition(CameraDirection::FORWARD, deltaTime); }
+		if (m_Keys[GLFW_KEY_S]) { g_Player->SetPosition(CameraDirection::BACKWARD, deltaTime); }
+		if (m_Keys[GLFW_KEY_D]) { g_Player->SetPosition(CameraDirection::RIGHT, deltaTime); }
+		if (m_Keys[GLFW_KEY_A]) { g_Player->SetPosition(CameraDirection::LEFT, deltaTime); }
+		if (m_Keys[GLFW_KEY_LEFT_SHIFT]) { g_Player->SetPosition(CameraDirection::UP, deltaTime); }
+		if (m_Keys[GLFW_KEY_LEFT_CONTROL]) { g_Player->SetPosition(CameraDirection::DOWN, deltaTime); }
 
-		if (m_Keys[GLFW_KEY_S]) { g_Player->SetPosition(Camera::Direction::BACKWARD, deltaTime); }
-
-		if (m_Keys[GLFW_KEY_D]) { g_Player->SetPosition(Camera::Direction::RIGHT, deltaTime); }
-
-		if (m_Keys[GLFW_KEY_A]) { g_Player->SetPosition(Camera::Direction::LEFT, deltaTime); }
-
-		if (m_Keys[GLFW_KEY_LEFT_SHIFT]) { g_Player->SetPosition(Camera::Direction::UP, deltaTime); }
-
-		if (m_Keys[GLFW_KEY_LEFT_CONTROL]) { g_Player->SetPosition(Camera::Direction::DOWN, deltaTime); }
-
-		if (g_World->CheckCollision(g_Player->GetAABB(), 2.0f)) // FIXME: Improve performance.
+		if (g_World->CheckCollision(g_Player->GetAABB(), 2.0f))
 		{
-			if (m_Keys[GLFW_KEY_W]) { g_Player->SetPosition(Camera::Direction::BACKWARD, deltaTime); }
-
-			if (m_Keys[GLFW_KEY_S]) { g_Player->SetPosition(Camera::Direction::FORWARD, deltaTime); }
-
-			if (m_Keys[GLFW_KEY_D]) { g_Player->SetPosition(Camera::Direction::LEFT, deltaTime); }
-
-			if (m_Keys[GLFW_KEY_A]) { g_Player->SetPosition(Camera::Direction::RIGHT, deltaTime); }
-
-			if (m_Keys[GLFW_KEY_LEFT_SHIFT]) { g_Player->SetPosition(Camera::Direction::DOWN, deltaTime); }
-
-			if (m_Keys[GLFW_KEY_LEFT_CONTROL]) { g_Player->SetPosition(Camera::Direction::UP, deltaTime); }
+			if (m_Keys[GLFW_KEY_W]) { g_Player->SetPosition(CameraDirection::BACKWARD, deltaTime); }
+			if (m_Keys[GLFW_KEY_S]) { g_Player->SetPosition(CameraDirection::FORWARD, deltaTime); }
+			if (m_Keys[GLFW_KEY_D]) { g_Player->SetPosition(CameraDirection::LEFT, deltaTime); }
+			if (m_Keys[GLFW_KEY_A]) { g_Player->SetPosition(CameraDirection::RIGHT, deltaTime); }
+			if (m_Keys[GLFW_KEY_LEFT_SHIFT]) { g_Player->SetPosition(CameraDirection::DOWN, deltaTime); }
+			if (m_Keys[GLFW_KEY_LEFT_CONTROL]) { g_Player->SetPosition(CameraDirection::UP, deltaTime); }
 		}
 	}
 
@@ -126,18 +128,18 @@ void Application::ProcessInput(float deltaTime)
 			glm::ivec3 localBlockPosition = std::get<2>(i);
 			glm::vec3 worldBlockPosition = std::get<3>(i);
 			int intersectedFace = std::get<4>(i);
-			glm::ivec3 intersectedFaceNormal = Block::s_CubeNormals[intersectedFace];
+			glm::ivec3 intersectedFaceNormal = Cube::s_Normals[intersectedFace];
 
 			std::pair<int, int> newChunkPosition = chunkPosition;
 			glm::ivec3 newLocalBlockPosition = Chunk::GetNextLocalBlockPosition(localBlockPosition, intersectedFaceNormal);
 			glm::vec3 newWorldBlockPosition = worldBlockPosition + (glm::vec3)intersectedFaceNormal;
 
-			if (!Chunk::IsAValidPosition(localBlockPosition + Block::s_CubeNormals[intersectedFace]))
+			if (!Chunk::IsAValidPosition(localBlockPosition + Cube::s_Normals[intersectedFace]))
 			{
 				newChunkPosition = { chunkPosition.first + intersectedFaceNormal.x, chunkPosition.second + intersectedFaceNormal.z };
 			}
 
-			if (g_World->InsertBlockAt(newChunkPosition, Block(Block::Type::DIRTY, newWorldBlockPosition), newLocalBlockPosition))
+			if (g_World->InsertBlockAt(newChunkPosition, Block(BlockType::DIRTY, newWorldBlockPosition), newLocalBlockPosition))
 			{
 				g_World->UpdateChunkMesh(newChunkPosition);					
 

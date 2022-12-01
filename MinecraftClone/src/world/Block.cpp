@@ -1,45 +1,45 @@
 #include "Block.h"
 
-glm::vec3 Block::s_CubeVertices[6][12] = {
+glm::fvec3 Cube::s_Vertices[6][12] = {
 	{ // front
-		glm::vec3(-0.5f, -0.5f,  0.5f),
-		glm::vec3( 0.5f, -0.5f,  0.5f),
-		glm::vec3( 0.5f,  0.5f,  0.5f),
-		glm::vec3(-0.5f,  0.5f,  0.5f)
+		glm::fvec3(-0.5f, -0.5f,  0.5f),
+		glm::fvec3( 0.5f, -0.5f,  0.5f),
+		glm::fvec3( 0.5f,  0.5f,  0.5f),
+		glm::fvec3(-0.5f,  0.5f,  0.5f)
 	},
 	{ // back
-		glm::vec3( 0.5f, -0.5f, -0.5f),
-		glm::vec3(-0.5f, -0.5f, -0.5f),
-		glm::vec3(-0.5f,  0.5f, -0.5f),
-		glm::vec3( 0.5f,  0.5f, -0.5f)
+		glm::fvec3( 0.5f, -0.5f, -0.5f),
+		glm::fvec3(-0.5f, -0.5f, -0.5f),
+		glm::fvec3(-0.5f,  0.5f, -0.5f),
+		glm::fvec3( 0.5f,  0.5f, -0.5f)
 	},
 	{ // right
-		glm::vec3( 0.5f, -0.5f,  0.5f),
-		glm::vec3( 0.5f, -0.5f, -0.5f),
-		glm::vec3( 0.5f,  0.5f, -0.5f),
-		glm::vec3( 0.5f,  0.5f,  0.5f)
+		glm::fvec3( 0.5f, -0.5f,  0.5f),
+		glm::fvec3( 0.5f, -0.5f, -0.5f),
+		glm::fvec3( 0.5f,  0.5f, -0.5f),
+		glm::fvec3( 0.5f,  0.5f,  0.5f)
 	},
 	{ // left
-		glm::vec3(-0.5f, -0.5f, -0.5f),
-		glm::vec3(-0.5f, -0.5f,  0.5f),
-		glm::vec3(-0.5f,  0.5f,  0.5f),
-		glm::vec3(-0.5f,  0.5f, -0.5f)
+		glm::fvec3(-0.5f, -0.5f, -0.5f),
+		glm::fvec3(-0.5f, -0.5f,  0.5f),
+		glm::fvec3(-0.5f,  0.5f,  0.5f),
+		glm::fvec3(-0.5f,  0.5f, -0.5f)
 	},
 	{ // top
-		glm::vec3(-0.5f,  0.5f,  0.5f),
-		glm::vec3( 0.5f,  0.5f,  0.5f),
-		glm::vec3( 0.5f,  0.5f, -0.5f),
-		glm::vec3(-0.5f,  0.5f, -0.5f)
+		glm::fvec3(-0.5f,  0.5f,  0.5f),
+		glm::fvec3( 0.5f,  0.5f,  0.5f),
+		glm::fvec3( 0.5f,  0.5f, -0.5f),
+		glm::fvec3(-0.5f,  0.5f, -0.5f)
 	},
 	{ // bottom
-		glm::vec3( 0.5f, -0.5f,  0.5f),
-		glm::vec3(-0.5f, -0.5f,  0.5f),
-		glm::vec3(-0.5f, -0.5f, -0.5f),
-		glm::vec3( 0.5f, -0.5f, -0.5f)
+		glm::fvec3( 0.5f, -0.5f,  0.5f),
+		glm::fvec3(-0.5f, -0.5f,  0.5f),
+		glm::fvec3(-0.5f, -0.5f, -0.5f),
+		glm::fvec3( 0.5f, -0.5f, -0.5f)
 	}
 };
 
-glm::ivec3 Block::s_CubeNormals[6] = {
+glm::ivec3 Cube::s_Normals[6] = {
 	glm::ivec3( 0, 0, 1), // front
 	glm::ivec3( 0, 0,-1), // back
 	glm::ivec3( 1, 0, 0), // right
@@ -48,30 +48,30 @@ glm::ivec3 Block::s_CubeNormals[6] = {
 	glm::ivec3( 0,-1, 0)  // bottom
 };
 
-glm::vec3 Block::s_CubeColors[6] = {
-	glm::vec3(0.80f, 0.80f, 0.80f), // front
-	glm::vec3(0.80f, 0.80f, 0.80f), // back
-	glm::vec3(0.85f, 0.85f, 0.85f), // right
-	glm::vec3(0.85f, 0.85f, 0.85f), // left
-	glm::vec3(1.00f, 1.00f, 1.00f), // top
-	glm::vec3(1.00f, 1.00f, 1.00f)  // bottom
+glm::fvec3 Cube::s_Colors[6] = {
+	glm::fvec3(0.80f, 0.80f, 0.80f), // front
+	glm::fvec3(0.80f, 0.80f, 0.80f), // back
+	glm::fvec3(0.85f, 0.85f, 0.85f), // right
+	glm::fvec3(0.85f, 0.85f, 0.85f), // left
+	glm::fvec3(1.00f, 1.00f, 1.00f), // top
+	glm::fvec3(1.00f, 1.00f, 1.00f)  // bottom
 };
 
-unsigned int Block::s_CubeIndices[6] = {
+unsigned int Cube::s_Indices[6] = {
 	0, 1, 2, 2, 3, 0
 };
 
-unsigned int Block::s_CubeTexCoords[6][2] = {
+unsigned int Cube::s_TexCoords[6][2] = {
 	{0, 0}, {1, 0}, {1, 1}, {0, 1}
 };
 
 Block::Block()
-	: m_Type(Block::Type::EMPTY), m_TexCoords(), m_Position()
+	: m_Type(BlockType::EMPTY), m_Position()
 {
 }
 
-Block::Block(Type type, const glm::vec3& position)
-	: m_Type(type), m_TexCoords(GenerateTexCoords(type)), m_Position(position)
+Block::Block(BlockType type, const glm::vec3& position)
+	: m_Type(type), m_Position(position)
 {
 }
 
@@ -79,14 +79,9 @@ Block::~Block()
 {
 }
 
-Block::Type Block::GetType()
+BlockType Block::GetType()
 {
 	return m_Type;
-}
-
-const std::array<glm::vec2, 4>& Block::GetTexCoords()
-{
-	return m_TexCoords;
 }
 
 std::pair<bool, int> Block::Intersect(const Ray& ray)
@@ -130,7 +125,7 @@ std::pair<bool, int> Block::Intersect(const Ray& ray)
 
 	for (unsigned int i = 0; i < 6; i++)
 	{
-		glm::vec3 N = (glm::vec3)s_CubeNormals[i];
+		glm::vec3 N = (glm::vec3)Cube::s_Normals[i];
 		glm::vec3 V = P - (i % 2 == 0 ? bounds[1] : bounds[0]); // Even index could be FRONT, RIGHT or TOP. Odd index could be BACK, LEFT or BOTTOM.
 
 		float dot = glm::dot(N, V);
@@ -157,11 +152,11 @@ bool Block::CheckCollision(const AABB& aabb)
 	return axisIntersections[0] && axisIntersections[1] && axisIntersections[2];
 }
 
-const std::array<glm::vec2, 4>& Block::GenerateTexCoords(Block::Type type)
+std::array<glm::vec2, 4> Block::GenerateTexCoords(BlockType type)
 {
-	std::array<glm::vec2, 4> uv;
+	std::array<glm::vec2, 4> uv{};
 
-	if (type != Block::Type::EMPTY)
+	if (type != BlockType::EMPTY)
 	{
 		// WARNING:
 		// 

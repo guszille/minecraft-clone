@@ -20,7 +20,7 @@ public:
 	const glm::vec3& GetPosition();
 	const glm::vec3& GetDirection();
 
-	void SetPosition(Camera::Direction direction, float deltaTime);
+	void SetPosition(CameraDirection direction, float deltaTime);
 	void SetDirection(float xOffset, float yOffset);
 
 	void Update(float deltaTime);

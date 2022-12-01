@@ -55,6 +55,38 @@ void World::Setup(const std::pair<int, int>& origin, int stride)
 		for (int j = origin.second - stride; j <= origin.second + stride; j++)
 		{
 			std::pair<int, int> chunkPosition(i, j);
+			Chunk* chunkReference = GetChunkIfExists(chunkPosition);
+
+			if (chunkReference == nullptr)
+			{
+				std::vector<std::pair<int, int>>::iterator it;
+				bool notFound = true;
+
+				for (it = m_ChunksToBeLoaded.begin(); it != m_ChunksToBeLoaded.end(); it++)
+				{
+					if (*it == chunkPosition)
+					{
+						notFound = false;
+						break;
+					}
+				}
+
+				if (notFound)
+				{
+					m_ChunksToBeLoaded.push_back(chunkPosition);
+				}
+			}
+		}
+	}
+
+	/*
+	Synchronous way to generate initial chunks!
+
+	for (int i = origin.first - stride; i <= origin.first + stride; i++)
+	{
+		for (int j = origin.second - stride; j <= origin.second + stride; j++)
+		{
+			std::pair<int, int> chunkPosition(i, j);
 			Chunk chunk(chunkPosition);
 
 			chunk.GenerateHeightMap();
@@ -65,42 +97,10 @@ void World::Setup(const std::pair<int, int>& origin, int stride)
 	}
 
 	GenerateMeshes();
-
-	/*
-		Using multithreading to generate the current chunk. 
-	
-			std::map<std::pair<int, int>, Chunk>::iterator it;
-			std::vector<std::thread> threads;
-
-			auto GenerateChunkFn = [](Chunk* chunk)
-			{
-				chunk->GenerateHeightMap();
-				chunk->GenerateBlocks();
-			};
-
-			for (int i = origin.first - stride; i <= origin.first + stride; i++)
-			{
-				for (int j = origin.second - stride; j <= origin.second + stride; j++)
-				{
-					InsertChunk(Chunk({ i, j }));
-				}
-			}
-
-			for (it = m_Chunks.begin(); it != m_Chunks.end(); it++)
-			{
-				threads.push_back(std::thread(GenerateChunkFn, &it->second));
-			}
-
-			for (int i = 0; i < threads.size(); i++)
-			{
-				threads[i].join();
-			}
-
-			GenerateMeshes();
 	*/
 }
 
-void World::Update(const std::pair<int, int>& origin, int stride)
+void World::Update(const std::pair<int, int>& origin, int stride, float deltaTime)
 {
 	for (int i = origin.first - stride; i <= origin.first + stride; i++)
 	{
@@ -111,41 +111,60 @@ void World::Update(const std::pair<int, int>& origin, int stride)
 
 			if (chunkReference == nullptr)
 			{
-				Chunk* chunksArround[4];
+				std::vector<std::pair<int, int>>::iterator it;
+				bool notFound = true;
 
-				std::pair<int, int> p0 = { chunkPosition.first, chunkPosition.second + 1 }; // front
-				std::pair<int, int> p1 = { chunkPosition.first, chunkPosition.second - 1 }; // back
-				std::pair<int, int> p2 = { chunkPosition.first + 1, chunkPosition.second }; // right
-				std::pair<int, int> p3 = { chunkPosition.first - 1, chunkPosition.second }; // left
+				for (it = m_ChunksToBeLoaded.begin(); it != m_ChunksToBeLoaded.end(); it++)
+				{
+					if (*it == chunkPosition)
+					{
+						notFound = false;
+						break;
+					}
+				}
 
-				chunksArround[0] = GetChunkIfExists(p0);
-				chunksArround[1] = GetChunkIfExists(p1);
-				chunksArround[2] = GetChunkIfExists(p2);
-				chunksArround[3] = GetChunkIfExists(p3);
-
-				Chunk chunk(chunkPosition);
-
-				chunk.GenerateHeightMap();
-				chunk.GenerateBlocks();
-				chunk.GenerateMesh(chunksArround);
-
-				InsertChunk(chunk);
-
-				UpdateChunkMesh(p0);
-				UpdateChunkMesh(p1);
-				UpdateChunkMesh(p2);
-				UpdateChunkMesh(p3);
+				if (notFound)
+				{
+					m_ChunksToBeLoaded.push_back(chunkPosition);
+				}
 			}
 		}
+	}
+
+	if (!m_ChunksToBeLoaded.empty())
+	{
+		std::pair<int, int> chunkPosition = m_ChunksToBeLoaded.at(0);
+		Chunk* chunksArround[4];
+
+		std::pair<int, int> p0 = { chunkPosition.first, chunkPosition.second + 1 }; // front
+		std::pair<int, int> p1 = { chunkPosition.first, chunkPosition.second - 1 }; // back
+		std::pair<int, int> p2 = { chunkPosition.first + 1, chunkPosition.second }; // right
+		std::pair<int, int> p3 = { chunkPosition.first - 1, chunkPosition.second }; // left
+
+		chunksArround[0] = GetChunkIfExists(p0);
+		chunksArround[1] = GetChunkIfExists(p1);
+		chunksArround[2] = GetChunkIfExists(p2);
+		chunksArround[3] = GetChunkIfExists(p3);
+
+		Chunk chunk(chunkPosition);
+
+		chunk.GenerateHeightMap();
+		chunk.GenerateBlocks();
+		chunk.GenerateMesh(chunksArround);
+
+		InsertChunk(chunk);
+
+		UpdateChunkMesh(p0);
+		UpdateChunkMesh(p1);
+		UpdateChunkMesh(p2);
+		UpdateChunkMesh(p3);
+
+		m_ChunksToBeLoaded.erase(m_ChunksToBeLoaded.begin());
 	}
 }
 
 void World::Render(Shader* shaderProgram)
 {
-	// WARNING:
-	// 
-	// Iterate a map isn't the most performative solution.
-	//
 	std::map<std::pair<int, int>, Chunk>::iterator it;
 
 	glEnable(GL_DEPTH_TEST);

@@ -3,7 +3,7 @@
 #include <map>
 #include <tuple>
 #include <array>
-#include <thread>
+#include <vector>
 
 #include <glad/glad.h>
 
@@ -32,7 +32,7 @@ public:
 	bool RemoveBlockAt(const std::pair<int, int>& chunkPosition, const glm::ivec3& blockPosition);
 
 	void Setup(const std::pair<int, int>& origin, int stride);
-	void Update(const std::pair<int, int>& origin, int stride);
+	void Update(const std::pair<int, int>& origin, int stride, float deltaTime);
 	void Render(Shader* shaderProgram);
 
 	void GenerateMeshes();
@@ -45,6 +45,7 @@ private:
 	int m_Seed;
 
 	std::map<std::pair<int, int>, Chunk> m_Chunks;
+	std::vector<std::pair<int, int>> m_ChunksToBeLoaded;
 
 	Chunk* GetChunkIfExists(const std::pair<int, int>& position);
 };
