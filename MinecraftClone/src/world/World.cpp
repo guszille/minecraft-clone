@@ -82,21 +82,21 @@ void World::Setup(const std::pair<int, int>& origin, int stride)
 	/*
 	Synchronous way to generate initial chunks!
 
-	for (int i = origin.first - stride; i <= origin.first + stride; i++)
-	{
-		for (int j = origin.second - stride; j <= origin.second + stride; j++)
+		for (int i = origin.first - stride; i <= origin.first + stride; i++)
 		{
-			std::pair<int, int> chunkPosition(i, j);
-			Chunk chunk(chunkPosition);
+			for (int j = origin.second - stride; j <= origin.second + stride; j++)
+			{
+				std::pair<int, int> chunkPosition(i, j);
+				Chunk chunk(chunkPosition);
 
-			chunk.GenerateHeightMap();
-			chunk.GenerateBlocks();
+				chunk.GenerateHeightMap();
+				chunk.GenerateBlocks();
 
-			InsertChunk(chunk);
+				InsertChunk(chunk);
+			}
 		}
-	}
 
-	GenerateMeshes();
+		GenerateMeshes();
 	*/
 }
 
@@ -276,8 +276,10 @@ Intersection World::CastRay(const glm::vec3& origin, const glm::vec3& direction,
 	return worldIntersection;
 }
 
-bool World::CheckCollision(const AABB& aabb, float maxRange)
+std::vector<Collision> World::CheckCollisions(const AABB& aabb, float maxRange)
 {
+	std::vector<Collision> worldCollisions;
+
 	std::pair<int, int> p0 = Chunk::GetChunkPositionFromWorld(aabb.m_Origin);
 	std::pair<int, int> p1 = { p0.first, p0.second + 1 };
 	std::pair<int, int> p2 = { p0.first, p0.second - 1 };
@@ -296,14 +298,25 @@ bool World::CheckCollision(const AABB& aabb, float maxRange)
 	{
 		if (chunksArround[i] != nullptr)
 		{
-			if (chunksArround[i]->CheckCollision(aabb, maxRange))
+			std::vector<Collision> chunkCollisions = chunksArround[i]->CheckCollisions(aabb, maxRange);
+
+			for (unsigned int j = 0; j < chunkCollisions.size(); j++)
 			{
-				return true;
+				Collision collision = chunkCollisions[j];
+
+				if (std::get<0>(collision))
+				{
+					worldCollisions.push_back(collision);
+				}
 			}
+
+			// Presuming that all collisions are valid, the vector can be updated with the code below.
+			//
+			// worldCollisions.insert(worldCollisions.end(), chunkCollisions.begin(), chunkCollisions.end());
 		}
 	}
 
-	return false;
+	return worldCollisions;
 }
 
 Chunk* World::GetChunkIfExists(const std::pair<int, int>& position)

@@ -92,8 +92,6 @@ int main(int argc, char* argv[])
 
     glViewport(0, 0, g_ScreenWidth, g_ScreenHeight);
 
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
     g_GameApp.Setup();
 
     while (!glfwWindowShouldClose(window))

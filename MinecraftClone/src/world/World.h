@@ -39,7 +39,7 @@ public:
 	void UpdateChunkMesh(const std::pair<int, int>& chunkPosition);
 
 	Intersection CastRay(const glm::vec3& origin, const glm::vec3& direction, float length);
-	bool CheckCollision(const AABB& aabb, float maxRange);
+	std::vector<Collision> CheckCollisions(const AABB& aabb, float maxRange);
 
 private:
 	int m_Seed;

@@ -115,11 +115,13 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\shaders\block_render_vs.glsl" />
-    <None Include="res\shaders\block_render_fs.glsl" />
+    <None Include="res\shaders\chunk_mesh_render_vs.glsl" />
+    <None Include="res\shaders\chunk_mesh_render_fs.glsl" />
     <None Include="res\shaders\ui_render_vs.glsl" />
     <None Include="res\shaders\ui_render_fs.glsl" />
     <None Include="res\shaders\text_render_vs.glsl" />
     <None Include="res\shaders\text_render_fs.glsl" />
+    <None Include="res\shaders\player_render_vs.glsl" />
+    <None Include="res\shaders\player_render_fs.glsl" />
   </ItemGroup>
 </Project>

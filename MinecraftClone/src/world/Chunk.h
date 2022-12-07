@@ -2,6 +2,7 @@
 
 #include <map>
 #include <tuple>
+#include <vector>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -44,7 +45,7 @@ public:
 	void Render(Shader* shaderProgram);
 
 	Intersection Intersect(const Ray& ray);
-	bool CheckCollision(const AABB& aabb, float maxRange);
+	std::vector<Collision> CheckCollisions(const AABB& aabb, float maxRange);
 
 	void Clear();
 

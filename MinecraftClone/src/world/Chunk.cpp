@@ -146,7 +146,7 @@ void Chunk::Render(Shader* shaderProgram)
 
 Intersection Chunk::Intersect(const Ray& ray)
 {
-	Intersection intersection = std::make_tuple(false, std::make_pair(0, 0), glm::ivec3(0), glm::vec3(0.0f), -1);
+	Intersection chunkIntersection = std::make_tuple(false, std::make_pair(0, 0), glm::ivec3(0), glm::vec3(0.0f), -1);
 	float distanceToClosestBlock = 0.0f;
 
 	for (int x = 0; x < s_DefaultDimensions.x; x++)
@@ -167,9 +167,9 @@ Intersection Chunk::Intersect(const Ray& ray)
 
 						if (blockIntersection.first)
 						{
-							if (!std::get<0>(intersection) || distanceToCurrBlock < distanceToClosestBlock)
+							if (!std::get<0>(chunkIntersection) || distanceToCurrBlock < distanceToClosestBlock)
 							{
-								intersection = std::make_tuple(true, m_Position, glm::ivec3(x, y, z), block.m_Position, blockIntersection.second);
+								chunkIntersection = std::make_tuple(true, m_Position, glm::ivec3(x, y, z), block.m_Position, blockIntersection.second);
 
 								distanceToClosestBlock = distanceToCurrBlock;
 							}
@@ -180,11 +180,12 @@ Intersection Chunk::Intersect(const Ray& ray)
 		}
 	}
 
-	return intersection;
+	return chunkIntersection;
 }
 
-bool Chunk::CheckCollision(const AABB& aabb, float maxRange)
+std::vector<Collision> Chunk::CheckCollisions(const AABB& aabb, float maxRange)
 {
+	std::vector<Collision> chunkCollisions;
 	int aabbChunkLayer = GetChunkLayerFromWorld(aabb.m_Origin);
 
 	for (int x = 0; x < s_DefaultDimensions.x; x++)
@@ -201,11 +202,24 @@ bool Chunk::CheckCollision(const AABB& aabb, float maxRange)
 
 					if (block.GetType() != BlockType::EMPTY)
 					{
-						if (glm::length(block.m_Position - aabb.m_Origin) <= maxRange)
+						glm::vec3 directionToCurrBlock = block.m_Position - aabb.m_Origin;
+
+						if (glm::length(directionToCurrBlock) <= maxRange)
 						{
 							if (block.CheckCollision(aabb))
 							{
-								return true;
+								int collidedFace = Cube::GetMostAlignedFace(directionToCurrBlock);
+
+								if (collidedFace == BlockFace::BOTTOM) // Double check.
+								{
+									glm::vec3 directionToTheBaseOfAABB = block.m_Position - aabb.m_Base;
+									collidedFace = Cube::GetMostAlignedFace(directionToTheBaseOfAABB);
+								}
+
+								glm::vec3 distanceToAABB = glm::abs(aabb.m_Origin - block.m_Position);
+								Collision blockCollision = std::make_tuple(true, collidedFace, distanceToAABB);
+
+								chunkCollisions.push_back(blockCollision);
 							}
 						}
 					}
@@ -214,7 +228,7 @@ bool Chunk::CheckCollision(const AABB& aabb, float maxRange)
 		}
 	}
 
-	return false;
+	return chunkCollisions;
 }
 
 void Chunk::Clear()

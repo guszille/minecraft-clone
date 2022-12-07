@@ -2,7 +2,8 @@
 
 Player* g_Player;
 World* g_World;
-Shader* g_BlockRenderShader;
+Shader* g_ChunkMeshRenderShader;
+Shader* g_PlayerRenderShader;
 Texture* g_SpriteSheet;
 HUD* g_HUD;
 TextRenderer* g_TextRenderer;
@@ -11,10 +12,18 @@ float g_NearPlane = 0.1f;
 float g_FarPlane = 1000.0f;
 float g_CameraSensitivity = 0.05f;
 
-int g_RenderDistance = 8; // In chunks.
+int g_RenderDistance = 2; // In chunks.
+int g_InitialRenderDistance = 4 * g_RenderDistance;
+
+bool g_PhysicsEnabled = false;
+
+float g_Gravity = -75.0f;
+float g_Friction = 150.0f;
 
 Application::Application(unsigned int screenWidth, unsigned int screenHeight)
-	: m_ScreenWidth(screenWidth), m_ScreenHeight(screenHeight), m_Keys(), m_KeysProcessed(), m_MouseButtons(), m_MouseButtonsProcessed(), m_CursorAttached(false), m_LastMousePosition(), m_CurrMousePosition()
+	: m_ScreenWidth(screenWidth), m_ScreenHeight(screenHeight),
+	  m_Keys(), m_KeysProcessed(), m_MouseButtons(), m_MouseButtonsProcessed(), m_CursorAttached(false), m_LastMousePosition(), m_CurrMousePosition(),
+	  m_GameMode(GameMode::SURVIVAL)
 {
 	std::srand((unsigned int)std::time(nullptr)); // Use current time as seed for random generator.
 
@@ -28,7 +37,8 @@ Application::~Application()
 {
 	delete g_Player;
 	delete g_World;
-	delete g_BlockRenderShader;
+	delete g_ChunkMeshRenderShader;
+	delete g_PlayerRenderShader;
 	delete g_SpriteSheet;
 	delete g_HUD;
 	delete g_TextRenderer;
@@ -36,21 +46,26 @@ Application::~Application()
 
 void Application::Setup()
 {
-	g_Player = new Player(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), 15.0f, 7.5f);
+	g_Player = new Player(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), 10.0f, 15.0f, 5.0f);
 	g_World = new World(std::rand());
-	g_BlockRenderShader = new Shader("res/shaders/block_render_vs.glsl", "res/shaders/block_render_fs.glsl");
+	g_ChunkMeshRenderShader = new Shader("res/shaders/chunk_mesh_render_vs.glsl", "res/shaders/chunk_mesh_render_fs.glsl");
+	g_PlayerRenderShader = new Shader("res/shaders/player_render_vs.glsl", "res/shaders/player_render_fs.glsl");
 	g_SpriteSheet = new Texture("res/textures/minecraft_spritesheet.png");
 	g_HUD = new HUD(m_ScreenWidth, m_ScreenHeight);
 	g_TextRenderer = new TextRenderer(m_ScreenWidth, m_ScreenHeight);
 
 	NoiseGenerator::Configure(g_World->GetSeed());
 
-	g_World->Setup(std::pair<int, int>(0, 0), g_RenderDistance);
+	g_World->Setup(std::pair<int, int>(0, 0), g_InitialRenderDistance);
 
-	g_BlockRenderShader->Bind();
-	g_BlockRenderShader->SetUniformMatrix4fv("uProjectionMatrix", m_ProjectionMatrix);
-	g_BlockRenderShader->SetUniform1i("uTexture", 0);
-	g_BlockRenderShader->Unbind();
+	g_ChunkMeshRenderShader->Bind();
+	g_ChunkMeshRenderShader->SetUniformMatrix4fv("uProjectionMatrix", m_ProjectionMatrix);
+	g_ChunkMeshRenderShader->SetUniform1i("uTexture", 0);
+	g_ChunkMeshRenderShader->Unbind();
+
+	g_PlayerRenderShader->Bind();
+	g_PlayerRenderShader->SetUniformMatrix4fv("uProjectionMatrix", m_ProjectionMatrix);
+	g_PlayerRenderShader->Unbind();
 
 	g_SpriteSheet->Bind(0); // Keep the main atlas texture on 0 unit position.
 
@@ -74,29 +89,38 @@ void Application::Update(float deltaTime)
 	std::pair<int, int> origin = Chunk::GetChunkPositionFromWorld(g_Player->GetPosition());
 
 	g_World->Update(origin, g_RenderDistance, deltaTime);
-	g_Player->Update(deltaTime);
+
+	if (g_PhysicsEnabled)
+	{
+		g_Player->Update(g_World, g_Gravity, g_Friction, deltaTime);
+	}
 }
 
 void Application::ProcessInput(float deltaTime)
 {
-	if (m_Keys[GLFW_KEY_W] || m_Keys[GLFW_KEY_S] || m_Keys[GLFW_KEY_D] || m_Keys[GLFW_KEY_A] || m_Keys[GLFW_KEY_LEFT_SHIFT] || m_Keys[GLFW_KEY_LEFT_CONTROL])
+	if (m_Keys[GLFW_KEY_F1])
 	{
-		if (m_Keys[GLFW_KEY_W]) { g_Player->SetPosition(CameraDirection::FORWARD, deltaTime); }
-		if (m_Keys[GLFW_KEY_S]) { g_Player->SetPosition(CameraDirection::BACKWARD, deltaTime); }
-		if (m_Keys[GLFW_KEY_D]) { g_Player->SetPosition(CameraDirection::RIGHT, deltaTime); }
-		if (m_Keys[GLFW_KEY_A]) { g_Player->SetPosition(CameraDirection::LEFT, deltaTime); }
-		if (m_Keys[GLFW_KEY_LEFT_SHIFT]) { g_Player->SetPosition(CameraDirection::UP, deltaTime); }
-		if (m_Keys[GLFW_KEY_LEFT_CONTROL]) { g_Player->SetPosition(CameraDirection::DOWN, deltaTime); }
+		g_PhysicsEnabled = true;
+	}
 
-		if (g_World->CheckCollision(g_Player->GetAABB(), 2.0f))
+	if (m_Keys[GLFW_KEY_W] || m_Keys[GLFW_KEY_S] || m_Keys[GLFW_KEY_D] || m_Keys[GLFW_KEY_A])
+	{
+		if (m_Keys[GLFW_KEY_W]) { g_Player->ApplyHorizontalVelocity(Direction::FORWARD); }
+		if (m_Keys[GLFW_KEY_S]) { g_Player->ApplyHorizontalVelocity(Direction::BACKWARD); }
+		if (m_Keys[GLFW_KEY_D]) { g_Player->ApplyHorizontalVelocity(Direction::RIGHT); }
+		if (m_Keys[GLFW_KEY_A]) { g_Player->ApplyHorizontalVelocity(Direction::LEFT); }
+
+		g_Player->ResolveHorizontalMovement();
+	}
+
+	if (m_Keys[GLFW_KEY_SPACE] && !m_KeysProcessed[GLFW_KEY_SPACE])
+	{
+		if (g_PhysicsEnabled)
 		{
-			if (m_Keys[GLFW_KEY_W]) { g_Player->SetPosition(CameraDirection::BACKWARD, deltaTime); }
-			if (m_Keys[GLFW_KEY_S]) { g_Player->SetPosition(CameraDirection::FORWARD, deltaTime); }
-			if (m_Keys[GLFW_KEY_D]) { g_Player->SetPosition(CameraDirection::LEFT, deltaTime); }
-			if (m_Keys[GLFW_KEY_A]) { g_Player->SetPosition(CameraDirection::RIGHT, deltaTime); }
-			if (m_Keys[GLFW_KEY_LEFT_SHIFT]) { g_Player->SetPosition(CameraDirection::DOWN, deltaTime); }
-			if (m_Keys[GLFW_KEY_LEFT_CONTROL]) { g_Player->SetPosition(CameraDirection::UP, deltaTime); }
+			g_Player->ApplyVerticalVelocity(Direction::UP);
 		}
+
+		m_KeysProcessed[GLFW_KEY_SPACE] = true;
 	}
 
 	if (m_LastMousePosition != m_CurrMousePosition)
@@ -107,18 +131,18 @@ void Application::ProcessInput(float deltaTime)
 			m_CursorAttached = true;
 		}
 
-		float xOffset = (m_LastMousePosition.x - m_CurrMousePosition.x) * g_CameraSensitivity;
-		float yOffset = (m_CurrMousePosition.y - m_LastMousePosition.y) * g_CameraSensitivity;
+		float xRotationOffset = (m_LastMousePosition.x - m_CurrMousePosition.x) * g_CameraSensitivity;
+		float yRotationOffset = (m_CurrMousePosition.y - m_LastMousePosition.y) * g_CameraSensitivity;
 
 		m_CurrMousePosition = m_LastMousePosition;
 
-		g_Player->SetDirection(xOffset, yOffset);
+		g_Player->CalculateViewDirection(xRotationOffset, yRotationOffset);
 	}
 
 	if (m_MouseButtons[GLFW_MOUSE_BUTTON_LEFT] && !m_MouseButtonsProcessed[GLFW_MOUSE_BUTTON_LEFT])
 	{
 		const glm::vec3& playerPosition = g_Player->GetPosition();
-		const glm::vec3& playerDirection = g_Player->GetDirection();
+		const glm::vec3& playerDirection = g_Player->GetViewDirection();
 
 		Intersection i = g_World->CastRay(playerPosition + (playerDirection * g_NearPlane), playerDirection, g_Player->m_Range);
 
@@ -126,13 +150,13 @@ void Application::ProcessInput(float deltaTime)
 		{
 			std::pair<int, int> chunkPosition = std::get<1>(i);
 			glm::ivec3 localBlockPosition = std::get<2>(i);
-			glm::vec3 worldBlockPosition = std::get<3>(i);
+			glm::vec3 globalBlockPosition = std::get<3>(i);
 			int intersectedFace = std::get<4>(i);
 			glm::ivec3 intersectedFaceNormal = Cube::s_Normals[intersectedFace];
 
 			std::pair<int, int> newChunkPosition = chunkPosition;
 			glm::ivec3 newLocalBlockPosition = Chunk::GetNextLocalBlockPosition(localBlockPosition, intersectedFaceNormal);
-			glm::vec3 newWorldBlockPosition = worldBlockPosition + (glm::vec3)intersectedFaceNormal;
+			glm::vec3 newWorldBlockPosition = globalBlockPosition + (glm::vec3)intersectedFaceNormal;
 
 			if (!Chunk::IsAValidPosition(localBlockPosition + Cube::s_Normals[intersectedFace]))
 			{
@@ -169,7 +193,7 @@ void Application::ProcessInput(float deltaTime)
 	if (m_MouseButtons[GLFW_MOUSE_BUTTON_RIGHT] && !m_MouseButtonsProcessed[GLFW_MOUSE_BUTTON_RIGHT])
 	{
 		const glm::vec3& playerPosition = g_Player->GetPosition();
-		const glm::vec3& playerDirection = g_Player->GetDirection();
+		const glm::vec3& playerDirection = g_Player->GetViewDirection();
 
 		Intersection i = g_World->CastRay(playerPosition + (playerDirection * g_NearPlane), playerDirection, g_Player->m_Range);
 
@@ -210,12 +234,12 @@ void Application::Render()
 {
 	// Render the game.
 	{
-		g_BlockRenderShader->Bind();
-		g_BlockRenderShader->SetUniformMatrix4fv("uViewMatrix", g_Player->GetViewMatrix());
+		g_ChunkMeshRenderShader->Bind();
+		g_ChunkMeshRenderShader->SetUniformMatrix4fv("uViewMatrix", g_Player->GetViewMatrix());
+		g_World->Render(g_ChunkMeshRenderShader);
+		g_ChunkMeshRenderShader->Unbind();
 
-		g_World->Render(g_BlockRenderShader);
-
-		g_BlockRenderShader->Unbind();
+		// g_Player->Render(g_PlayerRenderShader);
 	}
 
 	// Render the UI.
@@ -225,7 +249,7 @@ void Application::Render()
 		// Render any text.
 		{
 			const glm::vec3& playerPosition = g_Player->GetPosition();
-			const glm::vec3& playerDirection = g_Player->GetDirection();
+			const glm::vec3& playerDirection = g_Player->GetViewDirection();
 
 			std::string debugText1 = "POSITION: (" + std::to_string(playerPosition.x) + ", " + std::to_string(playerPosition.y) + ", " + std::to_string(playerPosition.z) + ")";
 			std::string debugText2 = "DIRECTION: (" + std::to_string(playerDirection.x) + ", " + std::to_string(playerDirection.y) + ", " + std::to_string(playerDirection.z) + ")";

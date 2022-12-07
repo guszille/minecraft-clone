@@ -20,6 +20,8 @@ public:
 	static unsigned int s_Indices[6];
 	static unsigned int s_TexCoords[6][2];
 
+	static int GetMostAlignedFace(const glm::vec3& direction);
+
 private:
 	Cube() = delete;  // Disable instantiating this class.
 	~Cube() = delete;

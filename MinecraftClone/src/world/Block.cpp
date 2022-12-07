@@ -65,6 +65,25 @@ unsigned int Cube::s_TexCoords[6][2] = {
 	{0, 0}, {1, 0}, {1, 1}, {0, 1}
 };
 
+int Cube::GetMostAlignedFace(const glm::vec3& direction)
+{
+	float greatestDot = 0.0f;
+	int bestMatch = -1;
+
+	for (int i = 0; i < 6; i++)
+	{
+		float currentDot = glm::dot(glm::normalize(direction), (glm::vec3)s_Normals[i]);
+
+		if (currentDot >= greatestDot)
+		{
+			greatestDot = currentDot;
+			bestMatch = i;
+		}
+	}
+
+	return bestMatch;
+}
+
 Block::Block()
 	: m_Type(BlockType::EMPTY), m_Position()
 {

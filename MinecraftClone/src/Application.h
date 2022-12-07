@@ -18,6 +18,8 @@
 
 #include "ui/HUD.h"
 
+enum class GameMode { CREATIVE, SURVIVAL };
+
 class Application
 {
 public:
@@ -44,4 +46,6 @@ private:
 	glm::vec2 m_LastMousePosition, m_CurrMousePosition;
 
 	glm::mat4 m_ProjectionMatrix;
+
+	GameMode m_GameMode;
 };
