@@ -429,28 +429,16 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							glm::vec3* vertices = Cube::s_Vertices[i];
 							unsigned int* indices = Cube::s_Indices; // Same indices to all block faces.
 
+							glm::vec3 n = (glm::vec3)Cube::s_Normals[i];
 							std::array<glm::vec2, 4> uv = Block::GenerateTexCoords(block.GetType());
 							glm::vec3 c = Cube::s_Colors[i];
 
-							// FIXME: Using only for debug.
-							// c = c * m_DebugColor;
-
 							if (block.GetType() == BlockType::GRASS)
 							{
-								if (i == BlockFace::TOP)
+								if (i != BlockFace::TOP)
 								{
-									c = c * glm::vec3(0.0f, 1.0f, 0.0f);
-								}
-								else
-								{
-									if (i == BlockFace::BOTTOM)
-									{
-										uv = Block::GenerateTexCoords(BlockType::DIRTY);
-									}
-									else
-									{
-										uv = Block::GenerateTexCoords(BlockType::GRASS_SIDE);
-									}
+									if (i == BlockFace::BOTTOM) { uv = Block::GenerateTexCoords(BlockType::DIRTY); }
+									else { uv = Block::GenerateTexCoords(BlockType::SIDE_GRASS); }
 								}
 							}
 
@@ -462,6 +450,9 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							m_Mesh.m_Vertices.push_back(v0.x);
 							m_Mesh.m_Vertices.push_back(v0.y);
 							m_Mesh.m_Vertices.push_back(v0.z);
+							m_Mesh.m_Vertices.push_back(n.x);
+							m_Mesh.m_Vertices.push_back(n.y);
+							m_Mesh.m_Vertices.push_back(n.z);
 							m_Mesh.m_Vertices.push_back(uv[0].x);
 							m_Mesh.m_Vertices.push_back(uv[0].y);
 							m_Mesh.m_Vertices.push_back(c.r);
@@ -471,6 +462,9 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							m_Mesh.m_Vertices.push_back(v1.x);
 							m_Mesh.m_Vertices.push_back(v1.y);
 							m_Mesh.m_Vertices.push_back(v1.z);
+							m_Mesh.m_Vertices.push_back(n.x);
+							m_Mesh.m_Vertices.push_back(n.y);
+							m_Mesh.m_Vertices.push_back(n.z);
 							m_Mesh.m_Vertices.push_back(uv[1].x);
 							m_Mesh.m_Vertices.push_back(uv[1].y);
 							m_Mesh.m_Vertices.push_back(c.r);
@@ -480,6 +474,9 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							m_Mesh.m_Vertices.push_back(v2.x);
 							m_Mesh.m_Vertices.push_back(v2.y);
 							m_Mesh.m_Vertices.push_back(v2.z);
+							m_Mesh.m_Vertices.push_back(n.x);
+							m_Mesh.m_Vertices.push_back(n.y);
+							m_Mesh.m_Vertices.push_back(n.z);
 							m_Mesh.m_Vertices.push_back(uv[2].x);
 							m_Mesh.m_Vertices.push_back(uv[2].y);
 							m_Mesh.m_Vertices.push_back(c.r);
@@ -489,6 +486,9 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							m_Mesh.m_Vertices.push_back(v3.x);
 							m_Mesh.m_Vertices.push_back(v3.y);
 							m_Mesh.m_Vertices.push_back(v3.z);
+							m_Mesh.m_Vertices.push_back(n.x);
+							m_Mesh.m_Vertices.push_back(n.y);
+							m_Mesh.m_Vertices.push_back(n.z);
 							m_Mesh.m_Vertices.push_back(uv[3].x);
 							m_Mesh.m_Vertices.push_back(uv[3].y);
 							m_Mesh.m_Vertices.push_back(c.r);

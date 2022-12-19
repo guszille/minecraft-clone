@@ -31,7 +31,7 @@ public:
 	TextRenderer(unsigned int screenWidth, unsigned int screenHeight);
 	~TextRenderer();
 
-	void Write(std::string text, float x, float y, float scale, glm::vec3 color = glm::vec3(1.0f));
+	void Write(std::string text, float x, float y, float scale, glm::vec3 color = glm::vec3(1.0f), int textureUnit = 0);
 
 private:
 	std::map<GLchar, Character> m_Characters;

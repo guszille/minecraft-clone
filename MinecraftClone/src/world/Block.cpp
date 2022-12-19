@@ -180,18 +180,18 @@ std::array<glm::vec2, 4> Block::GenerateTexCoords(BlockType type)
 		// WARNING:
 		// 
 		// The sprite sheet dimensions are hard-coded setted here.
-		// We expect a width and a height of 512 pixels, both. Also, each sprite with 16x16 pixels.
+		// We expect a width and a height of 160 pixels, both. Also, each sprite with 16x16 pixels.
 		//
-		float size = 512.0f / 16.0f;
+		float size = 160.0f / 10.0f;
 		float x0 = size * (type % 16);
 		float x1 = x0 + size;
-		float y0 = 512.0f - (size * (1 + (int)(type / 16.0f)));
+		float y0 = 160.0f - (size * (1 + (int)(type / 16.0f)));
 		float y1 = y0 + size;
 
-		x0 /= 512.0f;
-		x1 /= 512.0f;
-		y0 /= 512.0f;
-		y1 /= 512.0f;
+		x0 /= 160.0f;
+		x1 /= 160.0f;
+		y0 /= 160.0f;
+		y1 /= 160.0f;
 
 		uv[0] = glm::vec2(x0, y0);
 		uv[1] = glm::vec2(x1, y0);

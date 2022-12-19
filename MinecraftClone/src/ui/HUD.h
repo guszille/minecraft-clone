@@ -11,7 +11,7 @@ public:
 	HUD(unsigned int screenWidth, unsigned int screenHeight);
 	~HUD();
 
-	void Render();
+	void Render(int textureUnit);
 
 private:
 	unsigned int m_ScreenWidth, m_ScreenHeight;

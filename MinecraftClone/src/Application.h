@@ -9,6 +9,7 @@
 
 #include "graphics/core/Shader.h"
 #include "graphics/core/Texture.h"
+#include "graphics/core/DepthMap.h"
 #include "graphics/core/TextRenderer.h"
 
 #include "util/Player.h"
@@ -16,9 +17,13 @@
 #include "world/World.h"
 #include "world/NoiseGenerator.h"
 
+#include "world/elements/Sun.h"
+
 #include "ui/HUD.h"
 
-enum class GameMode { CREATIVE, SURVIVAL };
+#include "debug/DepthMapRenderer.h"
+
+enum class GameMode { SURVIVAL, CREATIVE, DEBUG };
 
 class Application
 {
@@ -45,7 +50,7 @@ private:
 	bool m_CursorAttached;
 	glm::vec2 m_LastMousePosition, m_CurrMousePosition;
 
-	glm::mat4 m_ProjectionMatrix;
+	glm::mat4 m_CameraProjectionMatrix, m_ShadowMapProjectionMatrix;
 
 	GameMode m_GameMode;
 };

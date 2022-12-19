@@ -7,7 +7,6 @@ TextRenderer::TextRenderer(unsigned int screenWidth, unsigned int screenHeight)
 
     m_TextRenderShader.Bind();
     m_TextRenderShader.SetUniformMatrix4fv("uProjectionMatrix", projectionMatrix);
-    m_TextRenderShader.SetUniform1i("uText", 8);
     m_TextRenderShader.Unbind();
 
     Load("res/fonts/minecraft.ttf", 16);
@@ -77,14 +76,14 @@ void TextRenderer::Load(const char* filepath, unsigned int fontSize)
     FT_Done_FreeType(freeTypeLib);
 }
 
-void TextRenderer::Write(std::string text, float x, float y, float scale, glm::vec3 color)
+void TextRenderer::Write(std::string text, float x, float y, float scale, glm::vec3 color, int textureUnit)
 {
     m_TextRenderShader.Bind();
+    m_TextRenderShader.SetUniform1i("uText", textureUnit);
     m_TextRenderShader.SetUniform3f("uTextColor", color);
 
-    glEnable(GL_BLEND);
     glBindVertexArray(m_VAO);
-    glActiveTexture(GL_TEXTURE0 + 8); // Keep on unit number 8.
+    glActiveTexture(GL_TEXTURE0 + textureUnit);
 
     std::string::const_iterator ci;
 
@@ -126,7 +125,6 @@ void TextRenderer::Write(std::string text, float x, float y, float scale, glm::v
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
-    glDisable(GL_BLEND);
 
     m_TextRenderShader.Unbind();
 }

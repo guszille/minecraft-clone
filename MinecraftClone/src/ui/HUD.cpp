@@ -12,7 +12,6 @@ HUD::HUD(unsigned int screenWidth, unsigned int screenHeight)
 
 	m_HUDRenderShader.Bind();
 	m_HUDRenderShader.SetUniformMatrix4fv("uProjectionMatrix", projectionMatrix);
-	m_HUDRenderShader.SetUniform1i("uTexture", 1);
 	m_HUDRenderShader.Unbind();
 }
 
@@ -20,7 +19,7 @@ HUD::~HUD()
 {
 }
 
-void HUD::Render()
+void HUD::Render(int textureUnit)
 {
 	m_HUDRenderShader.Bind();
 
@@ -33,16 +32,13 @@ void HUD::Render()
 		crossHairModelMatrix = glm::scale(crossHairModelMatrix, glm::vec3(20.0f, 20.0f, 1.0f));
 
 		m_HUDRenderShader.SetUniformMatrix4fv("uModelMatrix", crossHairModelMatrix);
+		m_HUDRenderShader.SetUniform1i("uTexture", textureUnit);
 
-		m_CrossHairTex.Bind(1);
-
-		glEnable(GL_BLEND);
+		m_CrossHairTex.Bind(textureUnit);
 
 		glBindVertexArray(m_VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
-
-		glDisable(GL_BLEND);
 	}
 
 	m_HUDRenderShader.Unbind();

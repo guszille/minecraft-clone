@@ -83,7 +83,21 @@ void Shader::SetUniform1i(const char* uniformName, int data)
 	}
 	else
 	{
-		std::cout << "[ERROR] SHADER PROGRAM: Failed to get location of uniform \"" << uniformName << "\"" << std::endl;
+		std::cout << "[ERROR] SHADER PROGRAM: Failed to get location of uniform \"" << uniformName << "\"." << std::endl;
+	}
+}
+
+void Shader::SetUniform1f(const char* uniformName, float data)
+{
+	int uniformLocation = glGetUniformLocation(m_ShaderProgramID, uniformName);
+
+	if (uniformLocation > -1)
+	{
+		glUniform1f(uniformLocation, data);
+	}
+	else
+	{
+		std::cout << "[ERROR] SHADER PROGRAM: Failed to get location of uniform \"" << uniformName << "\"." << std::endl;
 	}
 }
 
@@ -97,7 +111,7 @@ void Shader::SetUniform3f(const char* uniformName, const glm::vec3& data)
 	}
 	else
 	{
-		std::cout << "[ERROR] SHADER PROGRAM: Failed to get location of uniform \"" << uniformName << "\"" << std::endl;
+		std::cout << "[ERROR] SHADER PROGRAM: Failed to get location of uniform \"" << uniformName << "\"." << std::endl;
 	}
 }
 
@@ -111,7 +125,7 @@ void Shader::SetUniformMatrix4fv(const char* uniformName, const glm::mat4& data)
 	}
 	else
 	{
-		std::cout << "[ERROR] SHADER PROGRAM: Failed to get location of uniform \"" << uniformName << "\"" << std::endl;
+		std::cout << "[ERROR] SHADER PROGRAM: Failed to get location of uniform \"" << uniformName << "\"." << std::endl;
 	}
 }
 

@@ -65,6 +65,8 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
+    glfwWindowHint(GLFW_SAMPLES, 4);
+
     GLFWwindow* window = glfwCreateWindow(g_ScreenWidth, g_ScreenHeight, "Minecraft", NULL, NULL);
     glfwMakeContextCurrent(window);
 
@@ -107,10 +109,6 @@ int main(int argc, char* argv[])
 
         g_GameApp.Update(g_DeltaTime);
         g_GameApp.ProcessInput(g_DeltaTime);
-
-        glClearColor(0.45f, 0.65f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         g_GameApp.Render();
 
         glfwSwapBuffers(window);

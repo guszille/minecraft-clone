@@ -7,7 +7,7 @@
 #include "../physics/Ray.h"
 #include "../physics/AABB.h"
 
-enum BlockType { EMPTY = -1, GRASS, STONE, DIRTY, GRASS_SIDE, GLASS = 49 };
+enum BlockType { EMPTY = -1, GRASS, SIDE_GRASS, DIRTY, STONE, GLASS = 70 };
 enum BlockFace { FRONT, BACK, RIGHT, LEFT, TOP, BOTTOM };
 
 struct Cube

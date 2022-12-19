@@ -167,18 +167,10 @@ void World::Render(Shader* shaderProgram)
 {
 	std::map<std::pair<int, int>, Chunk>::iterator it;
 
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glEnable(GL_BLEND);
-
 	for (it = m_Chunks.begin(); it != m_Chunks.end(); it++)
 	{
 		it->second.Render(shaderProgram);
 	}
-
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_BLEND);
 }
 
 void World::GenerateMeshes()
