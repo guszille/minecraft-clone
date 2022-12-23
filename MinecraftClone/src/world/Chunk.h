@@ -16,6 +16,8 @@
 #include "Block.h"
 #include "NoiseGenerator.h"
 
+enum class MeshType { OPAQUE, TRANSLUCENT };
+
 class Chunk
 {
 public:
@@ -42,7 +44,7 @@ public:
 	void GenerateMesh(Chunk* chunksArround[4]);
 	void UpdateMesh(Chunk* chunksArround[4]);
 
-	void Render(Shader* shaderProgram);
+	void Render(Shader* shaderProgram, MeshType meshType);
 
 	Intersection Intersect(const Ray& ray);
 	std::vector<Collision> CheckCollisions(const AABB& aabb, float maxRange);
@@ -57,9 +59,7 @@ public:
 private:
 	Block*** m_Blocks;
 
-	Mesh m_Mesh;
-
-	glm::vec3 m_DebugColor;
+	Mesh m_OpaqueMesh, m_TranslucentMesh;
 
 	void SampleRenderableFaces(Chunk* chunksArround[4]);
 };

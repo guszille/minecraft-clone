@@ -33,7 +33,7 @@ public:
 
 	void Setup(const std::pair<int, int>& origin, int stride);
 	void Update(const std::pair<int, int>& origin, int stride, float deltaTime);
-	void Render(Shader* shaderProgram);
+	void Render(Shader* shaderProgram, MeshType meshTypeToRender);
 
 	void GenerateMeshes();
 	void UpdateChunkMesh(const std::pair<int, int>& chunkPosition);

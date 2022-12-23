@@ -31,7 +31,7 @@ float g_ShadowMapNearPlane = 0.1f;
 float g_ShadowMapFarPlane = 512.0f;
 int   g_ShadowMapWidth = 16384;
 int   g_ShadowMapHeight = 16384;
-float g_MinimumShadowBias = 0.00004f; // To prevent shadow acne.
+float g_MinimumShadowBias = 0.00005f; // To prevent shadow acne.
 bool  g_RenderDepthMap = false;
 
 int   g_RenderDistance = 16; // In chunks.
@@ -46,12 +46,12 @@ float g_Friction = 150.0f;
 
 Application::Application(unsigned int screenWidth, unsigned int screenHeight)
 	: m_ScreenWidth(screenWidth), m_ScreenHeight(screenHeight),
-	m_Keys(), m_KeysProcessed(), m_MouseButtons(), m_MouseButtonsProcessed(), m_CursorAttached(false), m_LastMousePosition(), m_CurrMousePosition(),
-	m_GameMode(GameMode::DEBUG)
+	  m_Keys(), m_KeysProcessed(), m_MouseButtons(), m_MouseButtonsProcessed(), m_CursorAttached(false), m_LastMousePosition(), m_CurrMousePosition(),
+	  m_GameMode(GameMode::DEBUG)
 {
 	std::srand((unsigned int)std::time(nullptr)); // Use current time as seed for random generator.
 
-	float fieldOfView = 45.0f;
+	float fieldOfView = 60.0f;
 	float aspectRatio = (float)screenWidth / (float)screenHeight;
 	float halfEdge = (float)g_ViewDistance;
 
@@ -89,12 +89,12 @@ void Application::Setup()
 	g_TextRenderer = new TextRenderer(m_ScreenWidth, m_ScreenHeight);
 	g_DepthMapRenderer = new DepthMapRenderer();
 
-	NoiseGenerator::Configure(g_World->GetSeed());
+	NoiseGenerator::Configure(g_World->GetSeed(), 0.005f);
 
 	g_World->Setup(std::pair<int, int>(0, 0), g_InitialRenderDistance);
 
 	g_ShadowMapRenderShader->Bind();
-	// Nothing to bind here.
+	// Nothing to set here.
 	g_ShadowMapRenderShader->Unbind();
 
 	g_ChunkMeshRenderShader->Bind();
@@ -108,6 +108,8 @@ void Application::Setup()
 	g_ChunkMeshRenderShader->SetUniform1i("uMaterial.Specular", 0);
 	g_ChunkMeshRenderShader->SetUniform1f("uMaterial.Shininess", 64.0f);
 	g_ChunkMeshRenderShader->SetUniform1i("uShadowMap", 1);
+	g_ChunkMeshRenderShader->SetUniform1i("uShaded", 1);
+	g_ChunkMeshRenderShader->SetUniform1i("uObscured", 1);
 	g_ChunkMeshRenderShader->SetUniform1f("uFogRadius", g_FogRadius);
 	g_ChunkMeshRenderShader->SetUniform1f("uFogDensity", g_FogDensity);
 	g_ChunkMeshRenderShader->SetUniform3f("uFogColor", g_ClearColor); // Same as the clear color or skybox texture.
@@ -126,7 +128,11 @@ void Application::Setup()
 
 	// Default OpenGL configs.
 	{
-		glEnable(GL_MULTISAMPLE);
+		// GL_MULTISAMPLE
+		// 
+		// WARNING: Multisample can cause some texture artifacts when combined with GL_NEAREST filtering.
+		// 
+		// glEnable(GL_MULTISAMPLE);
 
 		// GL_DEPTH_TEST
 		glDepthMask(GL_TRUE);
@@ -143,7 +149,8 @@ void Application::Setup()
 
 void Application::Update(float deltaTime)
 {
-	std::pair<int, int> origin = Chunk::GetChunkPositionFromWorld(g_Player->GetPosition());
+	const glm::vec3& playerPosition = g_Player->GetPosition();
+	std::pair<int, int> origin = Chunk::GetChunkPositionFromWorld(playerPosition);
 
 	g_World->Update(origin, g_RenderDistance, deltaTime);
 
@@ -152,7 +159,7 @@ void Application::Update(float deltaTime)
 		g_Player->Update(g_World, g_Gravity, g_Friction, deltaTime);
 	}
 
-	g_Sun->SetPosition(g_Player->GetPosition());
+	g_Sun->SetPosition(glm::vec3(playerPosition.x, 0.0f, playerPosition.z));
 }
 
 void Application::ProcessInput(float deltaTime)
@@ -227,7 +234,7 @@ void Application::ProcessInput(float deltaTime)
 				newChunkPosition = { chunkPosition.first + intersectedFaceNormal.x, chunkPosition.second + intersectedFaceNormal.z };
 			}
 
-			if (g_World->InsertBlockAt(newChunkPosition, Block(BlockType::DIRTY, newWorldBlockPosition), newLocalBlockPosition))
+			if (g_World->InsertBlockAt(newChunkPosition, Block(BlockType::STONE, newWorldBlockPosition), newLocalBlockPosition))
 			{
 				g_World->UpdateChunkMesh(newChunkPosition);					
 
@@ -317,14 +324,14 @@ void Application::ProcessInput(float deltaTime)
 
 	if (m_Keys[GLFW_KEY_KP_SUBTRACT] && !m_KeysProcessed[GLFW_KEY_KP_SUBTRACT])
 	{
-		// DEBUG.
+		g_MinimumShadowBias -= 0.00001f;
 
 		m_KeysProcessed[GLFW_KEY_KP_SUBTRACT] = true;
 	}
 
 	if (m_Keys[GLFW_KEY_KP_ADD] && !m_KeysProcessed[GLFW_KEY_KP_ADD])
 	{
-		// DEBUG.
+		g_MinimumShadowBias += 0.00001f;
 
 		m_KeysProcessed[GLFW_KEY_KP_ADD] = true;
 	}
@@ -340,7 +347,7 @@ void Application::Render()
 
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE);
-		glEnable(GL_BLEND);
+		// glEnable(GL_BLEND);
 
 		glCullFace(GL_FRONT);
 
@@ -350,7 +357,7 @@ void Application::Render()
 
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		g_World->Render(g_ShadowMapRenderShader);
+		g_World->Render(g_ShadowMapRenderShader, MeshType::OPAQUE);
 
 		g_ShadowMapRenderShader->Unbind();
 		g_ShadowMap->Unbind();
@@ -359,7 +366,7 @@ void Application::Render()
 
 		glDisable(GL_DEPTH_TEST);
 		glDisable(GL_CULL_FACE);
-		glDisable(GL_BLEND);
+		// glDisable(GL_BLEND);
 	}
 
 	if (g_RenderDepthMap) // DEBUG: Render the depth map.
@@ -393,13 +400,19 @@ void Application::Render()
 			g_ChunkMeshRenderShader->SetUniform3f("uViewPos", g_Player->GetPosition());
 			g_ChunkMeshRenderShader->SetUniformMatrix4fv("uLightSpaceMatrix", lightSpaceMatrix);
 			g_ChunkMeshRenderShader->SetUniform1f("uMinimumShadowBias", g_MinimumShadowBias);
+			g_ChunkMeshRenderShader->SetUniform1i("uShaded", 1);
 
-			g_World->Render(g_ChunkMeshRenderShader);
+			g_World->Render(g_ChunkMeshRenderShader, MeshType::OPAQUE);
+
+			glDisable(GL_CULL_FACE); // Disable FACE CULLING before rendering the translucent mesh?
+
+			g_ChunkMeshRenderShader->SetUniform1i("uShaded", 0);
+
+			g_World->Render(g_ChunkMeshRenderShader, MeshType::TRANSLUCENT);
 
 			g_ChunkMeshRenderShader->Unbind();
 
 			glDisable(GL_DEPTH_TEST);
-			glDisable(GL_CULL_FACE);
 			glDisable(GL_BLEND);
 		}
 
@@ -420,6 +433,8 @@ void Application::Render()
 
 		// Render the UI.
 		{
+			glEnable(GL_BLEND);
+
 			const glm::vec3& playerPosition = g_Player->GetPosition();
 			const glm::vec3& playerDirection = g_Player->GetViewDirection();
 
@@ -429,8 +444,6 @@ void Application::Render()
 			std::string debugText4 = "SHADOW BIAS: " + std::to_string(g_MinimumShadowBias);
 			std::string debugText5 = "FOG DENSITY: " + std::to_string(g_FogDensity);
 	
-			glEnable(GL_BLEND);
-
 			g_HUD->Render(2);
 			g_TextRenderer->Write(debugText1, 16.0f, 16.0f, 1.0f, glm::vec3(1.0f), 3);
 			g_TextRenderer->Write(debugText2, 16.0f, 32.0f, 1.0f, glm::vec3(1.0f), 3);

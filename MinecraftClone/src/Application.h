@@ -21,7 +21,7 @@
 
 #include "ui/HUD.h"
 
-#include "debug/DepthMapRenderer.h"
+#include "dev/DepthMapRenderer.h"
 
 enum class GameMode { SURVIVAL, CREATIVE, DEBUG };
 

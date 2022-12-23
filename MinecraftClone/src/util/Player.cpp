@@ -4,7 +4,7 @@ Player::Player(const glm::vec3& position, const glm::vec3& direction, float spee
 	: m_Camera(Camera(position, direction, glm::vec3(0.0f, 1.0f, 0.0f))),
 	  m_Position(position), m_Velocity(),
 	  m_VAO(), m_VBO(), m_EBO(),
-	  m_Jumping(true), m_Speed(speed), m_JumpSpeed(jumpSpeed), m_Range(range)
+	  m_Grounded(false), m_Jumping(false), m_Speed(speed), m_JumpSpeed(jumpSpeed), m_Range(range)
 {
 	InitializeRenderData();
 }
@@ -44,8 +44,6 @@ void Player::Update(World* world, float gravity, float friction, float deltaTime
 {
 	if (m_Velocity.x != 0.0f)
 	{
-		m_Position.x += m_Velocity.x * deltaTime;
-
 		if (m_Velocity.x > 0.0f)
 		{
 			m_Velocity.x = std::max(m_Velocity.x - (friction * deltaTime), 0.0f);
@@ -54,19 +52,19 @@ void Player::Update(World* world, float gravity, float friction, float deltaTime
 		{
 			m_Velocity.x = std::min(m_Velocity.x + (friction * deltaTime), 0.0f);
 		}
+
+		m_Position.x += m_Velocity.x * deltaTime;
 	}
+
+	m_Velocity.y = m_Velocity.y + (gravity * deltaTime);
 
 	if (m_Velocity.y != 0.0f)
 	{
 		m_Position.y += m_Velocity.y * deltaTime;
 	}
 
-	m_Velocity.y = m_Velocity.y + (gravity * deltaTime);
-
 	if (m_Velocity.z != 0.0f)
 	{
-		m_Position.z += m_Velocity.z * deltaTime;
-
 		if (m_Velocity.z > 0.0f)
 		{
 			m_Velocity.z = std::max(m_Velocity.z - (friction * deltaTime), 0.0f);
@@ -75,14 +73,20 @@ void Player::Update(World* world, float gravity, float friction, float deltaTime
 		{
 			m_Velocity.z = std::min(m_Velocity.z + (friction * deltaTime), 0.0f);
 		}
+
+		m_Position.z += m_Velocity.z * deltaTime;
 	}
 
 	AABB aabb = GetAABB();
-	glm::vec3 aabbDimensions = aabb.m_Max - aabb.m_Min;
-	float aabbDiagonal = glm::length(aabbDimensions);
+	glm::vec3 aabbMaxDistanceOfCollision(1.0f, 2.0f, 1.0f); // Based on the knowing shape of the player's AABB.
+	float aabbMaxRangeOfCollision = glm::length(aabbMaxDistanceOfCollision);
 
-	std::vector<Collision> collisions = world->CheckCollisions(aabb, aabbDiagonal);
-	bool collisionsChecked[6] = { false, false, false, false, false, false }; // At least one collision detection per direction.
+	std::vector<Collision> collisions = world->CheckCollisions(aabb, aabbMaxRangeOfCollision);
+	bool collisionsChecked[6] = { false, false, false, false, false, false }; // Only one collision detection per direction.
+
+	//std::sort(std::begin(collisions), std::end(collisions), [](const Collision& c1,const Collision& c2) {
+	//	return std::get<1>(c1) < std::get<1>(c2);
+	//});
 
 	for (Collision c : collisions)
 	{
@@ -95,23 +99,22 @@ void Player::Update(World* world, float gravity, float friction, float deltaTime
 			{
 				if (collidedFace == BlockFace::TOP || collidedFace == BlockFace::BOTTOM)
 				{
-					if (collidedFace == BlockFace::BOTTOM)
+					if (collidedFace == BlockFace::TOP)
 					{
-						m_Position.y = m_Position.y + (aabbDimensions.y - std::get<2>(c).y);
-
 						m_Jumping = false;
 					}
 
+					m_Position.y = m_Position.y + (collidedNormal.y * (aabbMaxDistanceOfCollision.y - std::get<2>(c).y));
 					m_Velocity.y = 0.0f;
 				}
 				else if (collidedFace == BlockFace::RIGHT || collidedFace == BlockFace::LEFT)
 				{
-					m_Position.x = m_Position.x + (-1 * collidedNormal.x * (aabbDimensions.x - std::get<2>(c).x));
+					m_Position.x = m_Position.x + (collidedNormal.x * (aabbMaxDistanceOfCollision.x - std::get<2>(c).x));
 					m_Velocity.x = 0.0f;
 				}
 				else if (collidedFace == BlockFace::FRONT || collidedFace == BlockFace::BACK)
 				{
-					m_Position.z = m_Position.z + (-1 * collidedNormal.z * (aabbDimensions.z - std::get<2>(c).z));
+					m_Position.z = m_Position.z + (collidedNormal.z * (aabbMaxDistanceOfCollision.z - std::get<2>(c).z));
 					m_Velocity.z = 0.0f;
 				}
 
@@ -119,6 +122,8 @@ void Player::Update(World* world, float gravity, float friction, float deltaTime
 			}
 		}
 	}
+
+	m_Grounded = collisionsChecked[BlockFace::TOP];
 
 	m_Camera.SetPosition(m_Position);
 }
@@ -149,7 +154,7 @@ void Player::Render(Shader* shaderProgram)
 
 AABB Player::GetAABB()
 {
-	return AABB(m_Position, m_Position - glm::vec3(0.0f, 2.0f, 0.0f), m_Position - glm::vec3(0.5f, 2.5f, 0.5f), m_Position + glm::vec3(0.5f));
+	return AABB(m_Position - glm::vec3(0.0f, 1.0f, 0.0f), m_Position - glm::vec3(0.5f, 2.5f, 0.5f), m_Position + glm::vec3(0.5f, 0.5f, 0.5f), 1.0f);
 }
 
 void Player::ApplyHorizontalVelocity(Direction movementDirection)
@@ -166,7 +171,7 @@ void Player::ApplyVerticalVelocity(Direction movementDirection)
 {
 	if (movementDirection == Direction::UP)
 	{
-		if (!m_Jumping)
+		if (m_Grounded && !m_Jumping)
 		{
 			m_Velocity.y = m_JumpSpeed;
 

@@ -5,7 +5,7 @@ int Chunk::s_DefaultYPosition = -128;
 int Chunk::s_DefaultLayerSize = 8;
 
 Chunk::Chunk(const std::pair<int, int>& position)
-	: m_Position(position), m_DebugColor((float)std::rand() / RAND_MAX, (float)std::rand() / RAND_MAX, (float)std::rand() / RAND_MAX)
+	: m_Position(position)
 {
 	m_HeightMap = new int*[s_DefaultDimensions.x];
 
@@ -60,7 +60,7 @@ Block& Chunk::GetBlockAt(const glm::ivec3& position)
 void Chunk::GenerateHeightMap(int minYPosition)
 {
 	int chunkWorldPosition[3] = { m_Position.first * s_DefaultDimensions.x, s_DefaultYPosition, m_Position.second * s_DefaultDimensions.z };
-	int maxYPosition = (int)((2.0f / 3.0f) * s_DefaultDimensions.y);
+	int maxYPosition = s_DefaultDimensions.y; // (int)((2.0f / 3.0f) * s_DefaultDimensions.y);
 
 	for (int x = 0; x < s_DefaultDimensions.x; x++)
 	{
@@ -68,7 +68,7 @@ void Chunk::GenerateHeightMap(int minYPosition)
 		{
 			float noise = NoiseGenerator::GetNoise2D((float)(x + chunkWorldPosition[0]), (float)(z + chunkWorldPosition[2]));
 
-			m_HeightMap[x][z] = (int)(minYPosition + ((noise + 1.0f) / 2.0f) * maxYPosition);
+			m_HeightMap[x][z] = (int)(minYPosition + (((noise + 1.0f) / 2.0f) * maxYPosition));
 		}
 	}
 }
@@ -76,7 +76,8 @@ void Chunk::GenerateHeightMap(int minYPosition)
 void Chunk::GenerateBlocks()
 {
 	int chunkWorldPosition[3] = { m_Position.first * s_DefaultDimensions.x, s_DefaultYPosition, m_Position.second * s_DefaultDimensions.z };
-	int maxYPosition = (int)((2.0f / 3.0f) * s_DefaultDimensions.y);
+	int maxYPosition = s_DefaultDimensions.y; // (int)((2.0f / 3.0f) * s_DefaultDimensions.y);
+	int seaLevel = s_DefaultYPosition + s_DefaultDimensions.y;
 
 	for (int x = 0; x < s_DefaultDimensions.x; x++)
 	{
@@ -96,6 +97,8 @@ void Chunk::GenerateBlocks()
 					if (y == maxHeight)
 					{
 						blockType = BlockType::GRASS;
+
+						if (y < seaLevel - 1) { blockType = BlockType::SAND; } // TODO: Improve terrain/biome generation.
 					}
 					else if (y < maxHeight && y >= maxHeight / 2)
 					{
@@ -108,6 +111,12 @@ void Chunk::GenerateBlocks()
 
 					InsertBlockAt(Block(blockType, glm::vec3(xWorldPos, yWorldPos, zWorldPos)), glm::ivec3(x, y, z));
 				}
+				else if (y < seaLevel)
+				{
+					BlockType blockType = BlockType::WATER;
+
+					InsertBlockAt(Block(blockType, glm::vec3(xWorldPos, yWorldPos, zWorldPos), false, true), glm::ivec3(x, y, z));
+				}
 			}
 		}
 	}
@@ -117,31 +126,45 @@ void Chunk::GenerateMesh(Chunk* chunksArround[4])
 {
 	SampleRenderableFaces(chunksArround);
 
-	m_Mesh.GenerateRenderData();
+	m_OpaqueMesh.GenerateRenderData();
+
+	m_TranslucentMesh.GenerateRenderData();
 }
 
 void Chunk::UpdateMesh(Chunk* chunksArround[4])
 {
-	m_Mesh.m_Vertices.clear();
-	m_Mesh.m_Indices.clear();
+	m_OpaqueMesh.m_Vertices.clear();
+	m_OpaqueMesh.m_Indices.clear();
+	m_OpaqueMesh.m_NumberOfFaces = 0;
 
-	m_Mesh.m_NumberOfFaces = 0;
+	m_TranslucentMesh.m_Vertices.clear();
+	m_TranslucentMesh.m_Indices.clear();
+	m_TranslucentMesh.m_NumberOfFaces = 0;
 
 	SampleRenderableFaces(chunksArround);
 
-	m_Mesh.UpdateRenderData();
+	m_OpaqueMesh.UpdateRenderData();
+
+	m_TranslucentMesh.UpdateRenderData();
 }
 
-void Chunk::Render(Shader* shaderProgram)
+void Chunk::Render(Shader* shaderProgram, MeshType meshTypeToRender)
 {
-	glm::vec3 chunkPosition(m_Position.first * s_DefaultDimensions.x, s_DefaultYPosition, m_Position.second * s_DefaultDimensions.z);
-
+	glm::vec3 chunkPosition(s_DefaultDimensions.x * m_Position.first, s_DefaultYPosition, s_DefaultDimensions.z * m_Position.second);
+	
 	glm::mat4 modelMatrix(1.0f);
 	modelMatrix = glm::translate(modelMatrix, chunkPosition);
 
 	shaderProgram->SetUniformMatrix4fv("uModelMatrix", modelMatrix);
 
-	m_Mesh.Render();
+	if (meshTypeToRender == MeshType::OPAQUE)
+	{
+		m_OpaqueMesh.Render();
+	}
+	else if (meshTypeToRender == MeshType::TRANSLUCENT)
+	{
+		m_TranslucentMesh.Render();
+	}
 }
 
 Intersection Chunk::Intersect(const Ray& ray)
@@ -157,7 +180,7 @@ Intersection Chunk::Intersect(const Ray& ray)
 			{
 				Block& block = m_Blocks[x][y][z];
 
-				if (block.GetType() != BlockType::EMPTY)
+				if (block.GetType() != BlockType::EMPTY && block.m_Solid)
 				{
 					float distanceToCurrBlock = glm::length(block.m_Position - ray.m_Origin);
 
@@ -200,24 +223,34 @@ std::vector<Collision> Chunk::CheckCollisions(const AABB& aabb, float maxRange)
 				{
 					Block& block = m_Blocks[x][y][z];
 
-					if (block.GetType() != BlockType::EMPTY)
+					if (block.GetType() != BlockType::EMPTY && block.m_Solid)
 					{
-						glm::vec3 directionToCurrBlock = block.m_Position - aabb.m_Origin;
+						glm::vec3 directionToAABB = aabb.m_Origin - block.m_Position;
 
-						if (glm::length(directionToCurrBlock) <= maxRange)
+						if (glm::length(directionToAABB) <= maxRange)
 						{
 							if (block.CheckCollision(aabb))
 							{
-								int collidedFace = Cube::GetMostAlignedFace(directionToCurrBlock);
+								int collidedFace = Cube::GetMostAlignedFace(directionToAABB);
 
-								if (collidedFace == BlockFace::BOTTOM) // Double check.
+								if (collidedFace == BlockFace::TOP || collidedFace == BlockFace::BOTTOM) // WARNING: Doing a double check when the collision occurred on the top or bottom faces.
 								{
-									glm::vec3 directionToTheBaseOfAABB = block.m_Position - aabb.m_Base;
-									collidedFace = Cube::GetMostAlignedFace(directionToTheBaseOfAABB);
+									if (collidedFace == BlockFace::TOP)
+									{
+										glm::vec3 simulatedAABBOrigin = aabb.m_Origin - glm::vec3(0.0f, aabb.m_KnotOffset, 0.0f);
+										directionToAABB = simulatedAABBOrigin - block.m_Position;
+									}
+									else
+									{
+										glm::vec3 simulatedAABBOrigin = aabb.m_Origin + glm::vec3(0.0f, aabb.m_KnotOffset, 0.0f);
+										directionToAABB = simulatedAABBOrigin - block.m_Position;
+									}
+
+									collidedFace = Cube::GetMostAlignedFace(directionToAABB);
 								}
 
-								glm::vec3 distanceToAABB = glm::abs(aabb.m_Origin - block.m_Position);
-								Collision blockCollision = std::make_tuple(true, collidedFace, distanceToAABB);
+								glm::vec3 cartesianDistanceToAABB = glm::abs(aabb.m_Origin - block.m_Position);
+								Collision blockCollision = std::make_tuple(true, collidedFace, cartesianDistanceToAABB);
 
 								chunkCollisions.push_back(blockCollision);
 							}
@@ -247,7 +280,9 @@ void Chunk::Clear()
 		delete[] m_Blocks;
 	}
 
-	m_Mesh.ClearRenderData();
+	m_OpaqueMesh.ClearRenderData();
+
+	m_TranslucentMesh.ClearRenderData();
 }
 
 void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
@@ -278,7 +313,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Cube::s_Normals[i]);
 									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
-									if (obstructingBlock.GetType() == BlockType::EMPTY)
+									if (obstructingBlock.GetType() == BlockType::EMPTY || (block.m_Solid && obstructingBlock.m_Translucent))
 									{
 										faceCanComposeMesh = true;
 									}
@@ -292,7 +327,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							{
 								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == BlockType::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY || (block.m_Solid && obstructingBlock.m_Translucent))
 								{
 									faceCanComposeMesh = true;
 								}
@@ -309,7 +344,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Cube::s_Normals[i]);
 									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
-									if (obstructingBlock.GetType() == BlockType::EMPTY)
+									if (obstructingBlock.GetType() == BlockType::EMPTY || (block.m_Solid && obstructingBlock.m_Translucent))
 									{
 										faceCanComposeMesh = true;
 									}
@@ -323,7 +358,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							{
 								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == BlockType::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY || (block.m_Solid && obstructingBlock.m_Translucent))
 								{
 									faceCanComposeMesh = true;
 								}
@@ -340,7 +375,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Cube::s_Normals[i]);
 									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
-									if (obstructingBlock.GetType() == BlockType::EMPTY)
+									if (obstructingBlock.GetType() == BlockType::EMPTY || (block.m_Solid && obstructingBlock.m_Translucent))
 									{
 										faceCanComposeMesh = true;
 									}
@@ -354,7 +389,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							{
 								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == BlockType::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY || (block.m_Solid && obstructingBlock.m_Translucent))
 								{
 									faceCanComposeMesh = true;
 								}
@@ -371,7 +406,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 									glm::ivec3 nextPosition = GetNextLocalBlockPosition(localBlockPosition, Cube::s_Normals[i]);
 									Block& obstructingBlock = chunk->GetBlockAt(nextPosition);
 
-									if (obstructingBlock.GetType() == BlockType::EMPTY)
+									if (obstructingBlock.GetType() == BlockType::EMPTY || (block.m_Solid && obstructingBlock.m_Translucent))
 									{
 										faceCanComposeMesh = true;
 									}
@@ -385,7 +420,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							{
 								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == BlockType::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY || (block.m_Solid && obstructingBlock.m_Translucent))
 								{
 									faceCanComposeMesh = true;
 								}
@@ -401,7 +436,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							{
 								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == BlockType::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY || (block.m_Solid && obstructingBlock.m_Translucent))
 								{
 									faceCanComposeMesh = true;
 								}
@@ -417,7 +452,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 							{
 								Block& obstructingBlock = GetBlockAt(localBlockPosition + Cube::s_Normals[i]);
 
-								if (obstructingBlock.GetType() == BlockType::EMPTY)
+								if (obstructingBlock.GetType() == BlockType::EMPTY || (block.m_Solid && obstructingBlock.m_Translucent))
 								{
 									faceCanComposeMesh = true;
 								}
@@ -431,78 +466,115 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[4])
 
 							glm::vec3 n = (glm::vec3)Cube::s_Normals[i];
 							std::array<glm::vec2, 4> uv = Block::GenerateTexCoords(block.GetType());
-							glm::vec3 c = Cube::s_Colors[i];
-
-							if (block.GetType() == BlockType::GRASS)
-							{
-								if (i != BlockFace::TOP)
-								{
-									if (i == BlockFace::BOTTOM) { uv = Block::GenerateTexCoords(BlockType::DIRTY); }
-									else { uv = Block::GenerateTexCoords(BlockType::SIDE_GRASS); }
-								}
-							}
 
 							glm::vec3 v0 = vertices[0] + (glm::vec3)localBlockPosition;
 							glm::vec3 v1 = vertices[1] + (glm::vec3)localBlockPosition;
 							glm::vec3 v2 = vertices[2] + (glm::vec3)localBlockPosition;
 							glm::vec3 v3 = vertices[3] + (glm::vec3)localBlockPosition;
 
-							m_Mesh.m_Vertices.push_back(v0.x);
-							m_Mesh.m_Vertices.push_back(v0.y);
-							m_Mesh.m_Vertices.push_back(v0.z);
-							m_Mesh.m_Vertices.push_back(n.x);
-							m_Mesh.m_Vertices.push_back(n.y);
-							m_Mesh.m_Vertices.push_back(n.z);
-							m_Mesh.m_Vertices.push_back(uv[0].x);
-							m_Mesh.m_Vertices.push_back(uv[0].y);
-							m_Mesh.m_Vertices.push_back(c.r);
-							m_Mesh.m_Vertices.push_back(c.g);
-							m_Mesh.m_Vertices.push_back(c.b);
+							if (!block.m_Translucent) // Opaque mesh.
+							{
+								if (block.GetType() == BlockType::GRASS)
+								{
+									if (i != BlockFace::TOP)
+									{
+										if (i == BlockFace::BOTTOM) { uv = Block::GenerateTexCoords(BlockType::DIRTY); }
+										else { uv = Block::GenerateTexCoords(BlockType::SIDE_GRASS); }
+									}
+								}
 
-							m_Mesh.m_Vertices.push_back(v1.x);
-							m_Mesh.m_Vertices.push_back(v1.y);
-							m_Mesh.m_Vertices.push_back(v1.z);
-							m_Mesh.m_Vertices.push_back(n.x);
-							m_Mesh.m_Vertices.push_back(n.y);
-							m_Mesh.m_Vertices.push_back(n.z);
-							m_Mesh.m_Vertices.push_back(uv[1].x);
-							m_Mesh.m_Vertices.push_back(uv[1].y);
-							m_Mesh.m_Vertices.push_back(c.r);
-							m_Mesh.m_Vertices.push_back(c.g);
-							m_Mesh.m_Vertices.push_back(c.b);
+								m_OpaqueMesh.m_Vertices.push_back(v0.x);
+								m_OpaqueMesh.m_Vertices.push_back(v0.y);
+								m_OpaqueMesh.m_Vertices.push_back(v0.z);
+								m_OpaqueMesh.m_Vertices.push_back(n.x);
+								m_OpaqueMesh.m_Vertices.push_back(n.y);
+								m_OpaqueMesh.m_Vertices.push_back(n.z);
+								m_OpaqueMesh.m_Vertices.push_back(uv[0].x);
+								m_OpaqueMesh.m_Vertices.push_back(uv[0].y);
 
-							m_Mesh.m_Vertices.push_back(v2.x);
-							m_Mesh.m_Vertices.push_back(v2.y);
-							m_Mesh.m_Vertices.push_back(v2.z);
-							m_Mesh.m_Vertices.push_back(n.x);
-							m_Mesh.m_Vertices.push_back(n.y);
-							m_Mesh.m_Vertices.push_back(n.z);
-							m_Mesh.m_Vertices.push_back(uv[2].x);
-							m_Mesh.m_Vertices.push_back(uv[2].y);
-							m_Mesh.m_Vertices.push_back(c.r);
-							m_Mesh.m_Vertices.push_back(c.g);
-							m_Mesh.m_Vertices.push_back(c.b);
+								m_OpaqueMesh.m_Vertices.push_back(v1.x);
+								m_OpaqueMesh.m_Vertices.push_back(v1.y);
+								m_OpaqueMesh.m_Vertices.push_back(v1.z);
+								m_OpaqueMesh.m_Vertices.push_back(n.x);
+								m_OpaqueMesh.m_Vertices.push_back(n.y);
+								m_OpaqueMesh.m_Vertices.push_back(n.z);
+								m_OpaqueMesh.m_Vertices.push_back(uv[1].x);
+								m_OpaqueMesh.m_Vertices.push_back(uv[1].y);
 
-							m_Mesh.m_Vertices.push_back(v3.x);
-							m_Mesh.m_Vertices.push_back(v3.y);
-							m_Mesh.m_Vertices.push_back(v3.z);
-							m_Mesh.m_Vertices.push_back(n.x);
-							m_Mesh.m_Vertices.push_back(n.y);
-							m_Mesh.m_Vertices.push_back(n.z);
-							m_Mesh.m_Vertices.push_back(uv[3].x);
-							m_Mesh.m_Vertices.push_back(uv[3].y);
-							m_Mesh.m_Vertices.push_back(c.r);
-							m_Mesh.m_Vertices.push_back(c.g);
-							m_Mesh.m_Vertices.push_back(c.b);
+								m_OpaqueMesh.m_Vertices.push_back(v2.x);
+								m_OpaqueMesh.m_Vertices.push_back(v2.y);
+								m_OpaqueMesh.m_Vertices.push_back(v2.z);
+								m_OpaqueMesh.m_Vertices.push_back(n.x);
+								m_OpaqueMesh.m_Vertices.push_back(n.y);
+								m_OpaqueMesh.m_Vertices.push_back(n.z);
+								m_OpaqueMesh.m_Vertices.push_back(uv[2].x);
+								m_OpaqueMesh.m_Vertices.push_back(uv[2].y);
 
-							m_Mesh.m_Indices.push_back(indices[0] + (m_Mesh.m_NumberOfFaces * 4));
-							m_Mesh.m_Indices.push_back(indices[1] + (m_Mesh.m_NumberOfFaces * 4));
-							m_Mesh.m_Indices.push_back(indices[2] + (m_Mesh.m_NumberOfFaces * 4));
-							m_Mesh.m_Indices.push_back(indices[3] + (m_Mesh.m_NumberOfFaces * 4));
-							m_Mesh.m_Indices.push_back(indices[4] + (m_Mesh.m_NumberOfFaces * 4));
-							m_Mesh.m_Indices.push_back(indices[5] + (m_Mesh.m_NumberOfFaces * 4));
+								m_OpaqueMesh.m_Vertices.push_back(v3.x);
+								m_OpaqueMesh.m_Vertices.push_back(v3.y);
+								m_OpaqueMesh.m_Vertices.push_back(v3.z);
+								m_OpaqueMesh.m_Vertices.push_back(n.x);
+								m_OpaqueMesh.m_Vertices.push_back(n.y);
+								m_OpaqueMesh.m_Vertices.push_back(n.z);
+								m_OpaqueMesh.m_Vertices.push_back(uv[3].x);
+								m_OpaqueMesh.m_Vertices.push_back(uv[3].y);
 
-							m_Mesh.m_NumberOfFaces += 1;
+								m_OpaqueMesh.m_Indices.push_back(indices[0] + (m_OpaqueMesh.m_NumberOfFaces * 4));
+								m_OpaqueMesh.m_Indices.push_back(indices[1] + (m_OpaqueMesh.m_NumberOfFaces * 4));
+								m_OpaqueMesh.m_Indices.push_back(indices[2] + (m_OpaqueMesh.m_NumberOfFaces * 4));
+								m_OpaqueMesh.m_Indices.push_back(indices[3] + (m_OpaqueMesh.m_NumberOfFaces * 4));
+								m_OpaqueMesh.m_Indices.push_back(indices[4] + (m_OpaqueMesh.m_NumberOfFaces * 4));
+								m_OpaqueMesh.m_Indices.push_back(indices[5] + (m_OpaqueMesh.m_NumberOfFaces * 4));
+
+								m_OpaqueMesh.m_NumberOfFaces += 1;
+							}
+							else // Translucent mesh.
+							{
+								m_TranslucentMesh.m_Vertices.push_back(v0.x);
+								m_TranslucentMesh.m_Vertices.push_back(v0.y);
+								m_TranslucentMesh.m_Vertices.push_back(v0.z);
+								m_TranslucentMesh.m_Vertices.push_back(n.x);
+								m_TranslucentMesh.m_Vertices.push_back(n.y);
+								m_TranslucentMesh.m_Vertices.push_back(n.z);
+								m_TranslucentMesh.m_Vertices.push_back(uv[0].x);
+								m_TranslucentMesh.m_Vertices.push_back(uv[0].y);
+
+								m_TranslucentMesh.m_Vertices.push_back(v1.x);
+								m_TranslucentMesh.m_Vertices.push_back(v1.y);
+								m_TranslucentMesh.m_Vertices.push_back(v1.z);
+								m_TranslucentMesh.m_Vertices.push_back(n.x);
+								m_TranslucentMesh.m_Vertices.push_back(n.y);
+								m_TranslucentMesh.m_Vertices.push_back(n.z);
+								m_TranslucentMesh.m_Vertices.push_back(uv[1].x);
+								m_TranslucentMesh.m_Vertices.push_back(uv[1].y);
+
+								m_TranslucentMesh.m_Vertices.push_back(v2.x);
+								m_TranslucentMesh.m_Vertices.push_back(v2.y);
+								m_TranslucentMesh.m_Vertices.push_back(v2.z);
+								m_TranslucentMesh.m_Vertices.push_back(n.x);
+								m_TranslucentMesh.m_Vertices.push_back(n.y);
+								m_TranslucentMesh.m_Vertices.push_back(n.z);
+								m_TranslucentMesh.m_Vertices.push_back(uv[2].x);
+								m_TranslucentMesh.m_Vertices.push_back(uv[2].y);
+
+								m_TranslucentMesh.m_Vertices.push_back(v3.x);
+								m_TranslucentMesh.m_Vertices.push_back(v3.y);
+								m_TranslucentMesh.m_Vertices.push_back(v3.z);
+								m_TranslucentMesh.m_Vertices.push_back(n.x);
+								m_TranslucentMesh.m_Vertices.push_back(n.y);
+								m_TranslucentMesh.m_Vertices.push_back(n.z);
+								m_TranslucentMesh.m_Vertices.push_back(uv[3].x);
+								m_TranslucentMesh.m_Vertices.push_back(uv[3].y);
+
+								m_TranslucentMesh.m_Indices.push_back(indices[0] + (m_TranslucentMesh.m_NumberOfFaces * 4));
+								m_TranslucentMesh.m_Indices.push_back(indices[1] + (m_TranslucentMesh.m_NumberOfFaces * 4));
+								m_TranslucentMesh.m_Indices.push_back(indices[2] + (m_TranslucentMesh.m_NumberOfFaces * 4));
+								m_TranslucentMesh.m_Indices.push_back(indices[3] + (m_TranslucentMesh.m_NumberOfFaces * 4));
+								m_TranslucentMesh.m_Indices.push_back(indices[4] + (m_TranslucentMesh.m_NumberOfFaces * 4));
+								m_TranslucentMesh.m_Indices.push_back(indices[5] + (m_TranslucentMesh.m_NumberOfFaces * 4));
+
+								m_TranslucentMesh.m_NumberOfFaces += 1;
+							}
 						}
 					}
 				}

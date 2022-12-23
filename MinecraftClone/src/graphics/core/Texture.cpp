@@ -43,6 +43,13 @@ Texture::Texture(const char* filepath, const bool gammaCorrection)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+	// WARNING!
+	// 
+	// Defining the index of the highest defined mipmap level to prevent texture artifacts.
+	// This is not a final solution, some artifacts remain.
+	//
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 4);
+
 	if (data)
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, m_Width, m_Height, 0, format, GL_UNSIGNED_BYTE, data);

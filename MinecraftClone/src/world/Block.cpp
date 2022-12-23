@@ -48,6 +48,8 @@ glm::ivec3 Cube::s_Normals[6] = {
 	glm::ivec3( 0,-1, 0)  // bottom
 };
 
+// WARNING: Deprecated! Face colors to simulate a global directional light.
+//
 glm::fvec3 Cube::s_Colors[6] = {
 	glm::fvec3(0.80f, 0.80f, 0.80f), // front
 	glm::fvec3(0.80f, 0.80f, 0.80f), // back
@@ -85,12 +87,12 @@ int Cube::GetMostAlignedFace(const glm::vec3& direction)
 }
 
 Block::Block()
-	: m_Type(BlockType::EMPTY), m_Position()
+	: m_Type(BlockType::EMPTY), m_Position(), m_Solid(false), m_Translucent(false)
 {
 }
 
-Block::Block(BlockType type, const glm::vec3& position)
-	: m_Type(type), m_Position(position)
+Block::Block(BlockType type, const glm::vec3& position, bool solid, bool translucent)
+	: m_Type(type), m_Position(position), m_Solid(solid), m_Translucent(translucent)
 {
 }
 
@@ -183,9 +185,9 @@ std::array<glm::vec2, 4> Block::GenerateTexCoords(BlockType type)
 		// We expect a width and a height of 160 pixels, both. Also, each sprite with 16x16 pixels.
 		//
 		float size = 160.0f / 10.0f;
-		float x0 = size * (type % 16);
+		float x0 = size * (type % 10);
 		float x1 = x0 + size;
-		float y0 = 160.0f - (size * (1 + (int)(type / 16.0f)));
+		float y0 = 160.0f - (size * (1 + (int)(type / 10.0f)));
 		float y1 = y0 + size;
 
 		x0 /= 160.0f;

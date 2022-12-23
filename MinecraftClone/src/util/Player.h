@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <algorithm>
 
 #include <glm/glm.hpp>
 
@@ -17,7 +18,7 @@ class Player
 public:
 	float m_Speed, m_JumpSpeed, m_Range;
 
-	bool m_Jumping;
+	bool m_Grounded, m_Jumping;
 
 public:
 	Player(const glm::vec3& position, const glm::vec3& direction, float speed, float jumpSpeed, float range);

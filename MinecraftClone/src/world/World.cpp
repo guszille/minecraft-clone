@@ -163,13 +163,13 @@ void World::Update(const std::pair<int, int>& origin, int stride, float deltaTim
 	}
 }
 
-void World::Render(Shader* shaderProgram)
+void World::Render(Shader* shaderProgram, MeshType meshTypeToRender)
 {
 	std::map<std::pair<int, int>, Chunk>::iterator it;
 
 	for (it = m_Chunks.begin(); it != m_Chunks.end(); it++)
 	{
-		it->second.Render(shaderProgram);
+		it->second.Render(shaderProgram, meshTypeToRender);
 	}
 }
 

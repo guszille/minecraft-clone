@@ -7,7 +7,22 @@
 #include "../physics/Ray.h"
 #include "../physics/AABB.h"
 
-enum BlockType { EMPTY = -1, GRASS, SIDE_GRASS, DIRTY, STONE, GLASS = 70 };
+enum BlockType {
+	EMPTY = -1, // AIR.
+	GRASS,
+	SIDE_GRASS,
+	DIRTY,
+	STONE,
+	BEDROCK,
+	BRICKS,
+	SAND,
+	GLOWSTONE,
+	SIDE_SNOW,
+	SNOW,
+	WATER = 19,
+	GLASS = 70
+};
+
 enum BlockFace { FRONT, BACK, RIGHT, LEFT, TOP, BOTTOM };
 
 struct Cube
@@ -32,8 +47,10 @@ class Block
 public:
 	glm::vec3 m_Position; // Global poistion.
 
+	bool m_Solid, m_Translucent;
+
 public:
-	Block(); Block(BlockType type, const glm::vec3& position);
+	Block(); Block(BlockType type, const glm::vec3& position, bool solid = true, bool translucent = false);
 	~Block();
 
 	BlockType GetType();

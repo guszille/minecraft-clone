@@ -18,21 +18,26 @@ struct Material
 }; 
 
 in VS_OUT {
-    vec3 FragPos;
+    vec3 FragPosModelSpace;
+    vec3 FragPosViewSpace;
     vec3 Normal;
     vec2 TexCoords;
-    vec4 FragPosViewSpace;
     vec4 FragPosLightSpace;
-    vec3 DebugColor;
 } fs_in;
 
 uniform Light uLight;
 uniform Material uMaterial;
 uniform sampler2D uShadowMap;
+
+uniform bool uShaded = false;
+uniform bool uObscured = false;
+
+uniform float uAlphaThreshold = 0.0;
 uniform float uMinimumShadowBias;
 uniform float uFogRadius;
 uniform float uFogDensity;
 uniform vec3 uFogColor;
+
 uniform vec3 uViewPos;
 
 out vec4 FragColor;
@@ -101,29 +106,51 @@ float calcFogFactor()
 
 void main()
 {
+    vec4 finalPixelColor = vec4(0.0);
+
+    vec4 diffuseTexel = texture(uMaterial.Diffuse, fs_in.TexCoords);
+    vec4 specularTexel = texture(uMaterial.Specular, fs_in.TexCoords);
+
+    // Discarding fragments below an alpha threshold (transparency).
+    if (diffuseTexel.a < uAlphaThreshold)
+	{
+		discard;
+	}
+
+    // Calculating auxiliary vectors for lighting.
     vec3 fragNormal = normalize(fs_in.Normal);
-    vec3 lightDir = normalize(-uLight.Direction); // normalize(uLight.Position - fs_in.FragPos);
-    vec3 viewDir = normalize(uViewPos - fs_in.FragPos);
+    vec3 lightDir = normalize(-uLight.Direction); // normalize(uLight.Position - fs_in.FragPosModelSpace);
+    vec3 viewDir = normalize(uViewPos - fs_in.FragPosModelSpace);
     vec3 halfwayDir = normalize(lightDir + viewDir);
 
+    // Calculating the strength of lighting components.
     float diffuseStr = max(dot(fragNormal, lightDir), 0.0);
     float specularStr = pow(max(dot(fragNormal, halfwayDir), 0.0), uMaterial.Shininess);
 
     // Calculating "Blinn-Phong Lighting" components.
+    vec3 ambient = uLight.Ambient * vec3(diffuseTexel);
+    vec3 diffuse = uLight.Diffuse * (diffuseStr * vec3(diffuseTexel));
+    vec3 specular = uLight.Specular * (specularStr * vec3(specularTexel));
 
-    vec3 ambient = uLight.Ambient * vec3(texture(uMaterial.Diffuse, fs_in.TexCoords));
-    vec3 diffuse = uLight.Diffuse * (diffuseStr * vec3(texture(uMaterial.Diffuse, fs_in.TexCoords)));
-    vec3 specular = uLight.Specular * (specularStr * vec3(texture(uMaterial.Specular, fs_in.TexCoords)));
+    // Claculating shading.
+    if (uShaded)
+    {
+        float shadowingFactor = calcShadowingFactor(lightDir);
 
-    // Claculating shadowing.
+        finalPixelColor = vec4(ambient + ((1.0 - shadowingFactor) * (diffuse + specular)), 1.0);
+    }
+    else
+    {
+        finalPixelColor = vec4(ambient + diffuse + specular, diffuseTexel.a); // FIXME: Review.
+    }
 
-    float shadowingFactor = calcShadowingFactor(lightDir);
+    // Calculating obscuration.
+    if (uObscured)
+    {
+        float fogFactor = calcFogFactor();
 
-    vec4 pixelColor = vec4(ambient + ((1.0 - shadowingFactor) * (diffuse + specular)), 1.0);
+        finalPixelColor = mix(vec4(uFogColor, 1.0), finalPixelColor, fogFactor);
+    }
 
-    // Calculating fog.
-
-    float fogFactor = calcFogFactor();
-
-    FragColor = mix(vec4(uFogColor, 1.0), pixelColor, fogFactor);
+    FragColor = finalPixelColor;
 }
