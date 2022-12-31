@@ -15,6 +15,7 @@
 
 #include "Block.h"
 #include "NoiseGenerator.h"
+#include "StructuresHandler.h"
 
 enum class MeshType { OPAQUE, TRANSLUCENT };
 
@@ -38,8 +39,11 @@ public:
 
 	Block& GetBlockAt(const glm::ivec3& position);
 
-	void GenerateHeightMap(int minYPosition = 0);
+	void GenerateHeightMap(const NoiseGenerator& generator, int minYPosition = 0);
+	void GenerateStructures(const StructuresProfile& configuration);
 	void GenerateBlocks();
+
+	void CheckForGeneratedStructures();
 
 	void GenerateMesh(Chunk* chunksArround[4]);
 	void UpdateMesh(Chunk* chunksArround[4]);

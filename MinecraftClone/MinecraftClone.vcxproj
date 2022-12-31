@@ -164,6 +164,7 @@
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\world\elements\Sun.cpp" />
     <ClCompile Include="src\world\NoiseGenerator.cpp" />
+    <ClCompile Include="src\world\StructuresHandler.cpp" />
     <ClCompile Include="src\world\World.cpp" />
     <ClCompile Include="src\vendor\src\glad.c" />
   </ItemGroup>
@@ -184,6 +185,7 @@
     <ClInclude Include="src\graphics\core\Texture.h" />
     <ClInclude Include="src\world\elements\Sun.h" />
     <ClInclude Include="src\world\NoiseGenerator.h" />
+    <ClInclude Include="src\world\StructuresHandler.h" />
     <ClInclude Include="src\world\World.h" />
   </ItemGroup>
   <ItemGroup>

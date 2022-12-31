@@ -16,11 +16,12 @@
 
 #include "Block.h"
 #include "Chunk.h"
+#include "NoiseGenerator.h"
 
 class World
 {
 public:
-	World(int seed);
+	World(int seed, float terrainNoiseFrequency, float leavesFrequency, float treesFrequency);
 	~World();
 
 	int GetSeed();
@@ -35,6 +36,8 @@ public:
 	void Update(const std::pair<int, int>& origin, int stride, float deltaTime);
 	void Render(Shader* shaderProgram, MeshType meshTypeToRender);
 
+	void UpdateChunkStructures(const std::pair<int, int>& chunkPosition);
+
 	void GenerateMeshes();
 	void UpdateChunkMesh(const std::pair<int, int>& chunkPosition);
 
@@ -46,6 +49,9 @@ private:
 
 	std::map<std::pair<int, int>, Chunk> m_Chunks;
 	std::vector<std::pair<int, int>> m_ChunksToBeLoaded;
+
+	NoiseGenerator m_TerrainGenerator;
+	StructuresProfile m_StructuresConfiguration;
 
 	Chunk* GetChunkIfExists(const std::pair<int, int>& position);
 };

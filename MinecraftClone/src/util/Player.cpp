@@ -84,9 +84,9 @@ void Player::Update(World* world, float gravity, float friction, float deltaTime
 	std::vector<Collision> collisions = world->CheckCollisions(aabb, aabbMaxRangeOfCollision);
 	bool collisionsChecked[6] = { false, false, false, false, false, false }; // Only one collision detection per direction.
 
-	//std::sort(std::begin(collisions), std::end(collisions), [](const Collision& c1,const Collision& c2) {
-	//	return std::get<1>(c1) < std::get<1>(c2);
-	//});
+	//	std::sort(std::begin(collisions), std::end(collisions), [](const Collision& c1,const Collision& c2) {
+	//		return std::get<1>(c1) < std::get<1>(c2);
+	//	});
 
 	for (Collision c : collisions)
 	{

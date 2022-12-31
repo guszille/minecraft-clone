@@ -34,11 +34,11 @@ int   g_ShadowMapHeight = 16384;
 float g_MinimumShadowBias = 0.00005f; // To prevent shadow acne.
 bool  g_RenderDepthMap = false;
 
-int   g_RenderDistance = 16; // In chunks.
+int   g_RenderDistance = 8; // In chunks.
 int   g_InitialRenderDistance = g_RenderDistance;
 int   g_ViewDistance = 16 * g_RenderDistance; // In blocks.
 
-float g_FogRadius = (float)(g_ViewDistance - 16);
+float g_FogRadius = (float)(g_ViewDistance - 32);
 float g_FogDensity = 0.025f;
 
 float g_Gravity = -75.0f;
@@ -77,8 +77,8 @@ Application::~Application()
 void Application::Setup()
 {
 	g_Player = new Player(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), 10.0f, 15.0f, 5.0f);
-	g_World = new World(std::rand());
-	g_Sun = new Sun(glm::vec3(128.0f, 256.0f, 128.0f), glm::vec3(-128.0f, -256.0f, -128.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	g_World = new World(std::rand(), 0.005f, 0.15f, 0.0015f);
+	g_Sun = new Sun(glm::vec3(192.0f, 192.0f, 0.0f), glm::vec3(-192.0f, -192.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	g_HUD = new HUD(m_ScreenWidth, m_ScreenHeight);
 	g_ShadowMapRenderShader = new Shader("res/shaders/shadow_map_render_vs.glsl", "res/shaders/shadow_map_render_fs.glsl");
 	g_ChunkMeshRenderShader = new Shader("res/shaders/chunk_mesh_render_vs.glsl", "res/shaders/chunk_mesh_render_fs.glsl");
@@ -89,18 +89,17 @@ void Application::Setup()
 	g_TextRenderer = new TextRenderer(m_ScreenWidth, m_ScreenHeight);
 	g_DepthMapRenderer = new DepthMapRenderer();
 
-	NoiseGenerator::Configure(g_World->GetSeed(), 0.005f);
-
 	g_World->Setup(std::pair<int, int>(0, 0), g_InitialRenderDistance);
 
 	g_ShadowMapRenderShader->Bind();
-	// Nothing to set here.
+	g_ShadowMapRenderShader->SetUniform1f("uAlphaThreshold", 0.95f);
+	g_ShadowMapRenderShader->SetUniform1i("uTexture", 0);
 	g_ShadowMapRenderShader->Unbind();
 
 	g_ChunkMeshRenderShader->Bind();
 	g_ChunkMeshRenderShader->SetUniformMatrix4fv("uProjectionMatrix", m_CameraProjectionMatrix);
 	g_ChunkMeshRenderShader->SetUniform3f("uLight.Ambient", glm::vec3(0.35f, 0.35f, 0.35f));
-	g_ChunkMeshRenderShader->SetUniform3f("uLight.Diffuse", glm::vec3(1.0f, 1.0f, 1.0f));
+	g_ChunkMeshRenderShader->SetUniform3f("uLight.Diffuse", glm::vec3(0.85f, 0.85f, 0.85f));
 	g_ChunkMeshRenderShader->SetUniform3f("uLight.Specular", glm::vec3(0.0f, 0.0f, 0.0f)); // No specular component.
 	g_ChunkMeshRenderShader->SetUniform3f("uLight.Position", g_Sun->GetPosition());
 	g_ChunkMeshRenderShader->SetUniform3f("uLight.Direction", g_Sun->GetDirection());
@@ -110,6 +109,7 @@ void Application::Setup()
 	g_ChunkMeshRenderShader->SetUniform1i("uShadowMap", 1);
 	g_ChunkMeshRenderShader->SetUniform1i("uShaded", 1);
 	g_ChunkMeshRenderShader->SetUniform1i("uObscured", 1);
+	g_ChunkMeshRenderShader->SetUniform1f("uAlphaThreshold", 0.05f);
 	g_ChunkMeshRenderShader->SetUniform1f("uFogRadius", g_FogRadius);
 	g_ChunkMeshRenderShader->SetUniform1f("uFogDensity", g_FogDensity);
 	g_ChunkMeshRenderShader->SetUniform3f("uFogColor", g_ClearColor); // Same as the clear color or skybox texture.
@@ -234,7 +234,7 @@ void Application::ProcessInput(float deltaTime)
 				newChunkPosition = { chunkPosition.first + intersectedFaceNormal.x, chunkPosition.second + intersectedFaceNormal.z };
 			}
 
-			if (g_World->InsertBlockAt(newChunkPosition, Block(BlockType::STONE, newWorldBlockPosition), newLocalBlockPosition))
+			if (g_World->InsertBlockAt(newChunkPosition, Block(BlockType::GLASS, newWorldBlockPosition, true, true), newLocalBlockPosition))
 			{
 				g_World->UpdateChunkMesh(newChunkPosition);					
 
@@ -346,10 +346,6 @@ void Application::Render()
 		glViewport(0, 0, g_ShadowMapWidth, g_ShadowMapHeight);
 
 		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);
-		// glEnable(GL_BLEND);
-
-		glCullFace(GL_FRONT);
 
 		g_ShadowMap->Bind();
 		g_ShadowMapRenderShader->Bind();
@@ -357,16 +353,22 @@ void Application::Render()
 
 		glClear(GL_DEPTH_BUFFER_BIT);
 
+		glEnable(GL_CULL_FACE);
+		
+		glCullFace(GL_FRONT);
+
 		g_World->Render(g_ShadowMapRenderShader, MeshType::OPAQUE);
+
+		glCullFace(GL_BACK);
+
+		glDisable(GL_CULL_FACE);
+
+		g_World->Render(g_ShadowMapRenderShader, MeshType::TRANSLUCENT);
 
 		g_ShadowMapRenderShader->Unbind();
 		g_ShadowMap->Unbind();
 
-		glCullFace(GL_BACK);
-
 		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_CULL_FACE);
-		// glDisable(GL_BLEND);
 	}
 
 	if (g_RenderDepthMap) // DEBUG: Render the depth map.
@@ -389,7 +391,6 @@ void Application::Render()
 			glViewport(0, 0, m_ScreenWidth, m_ScreenHeight); // Reset viewport.
 
 			glEnable(GL_DEPTH_TEST);
-			glEnable(GL_CULL_FACE);
 			glEnable(GL_BLEND);
 
 			glClearColor(g_ClearColor.x, g_ClearColor.y, g_ClearColor.z, 1.0f);
@@ -400,13 +401,16 @@ void Application::Render()
 			g_ChunkMeshRenderShader->SetUniform3f("uViewPos", g_Player->GetPosition());
 			g_ChunkMeshRenderShader->SetUniformMatrix4fv("uLightSpaceMatrix", lightSpaceMatrix);
 			g_ChunkMeshRenderShader->SetUniform1f("uMinimumShadowBias", g_MinimumShadowBias);
-			g_ChunkMeshRenderShader->SetUniform1i("uShaded", 1);
+
+			// g_ChunkMeshRenderShader->SetUniform1i("uShaded", 1);
+
+			glEnable(GL_CULL_FACE);
 
 			g_World->Render(g_ChunkMeshRenderShader, MeshType::OPAQUE);
 
 			glDisable(GL_CULL_FACE); // Disable FACE CULLING before rendering the translucent mesh?
 
-			g_ChunkMeshRenderShader->SetUniform1i("uShaded", 0);
+			// g_ChunkMeshRenderShader->SetUniform1i("uShaded", 0);
 
 			g_World->Render(g_ChunkMeshRenderShader, MeshType::TRANSLUCENT);
 

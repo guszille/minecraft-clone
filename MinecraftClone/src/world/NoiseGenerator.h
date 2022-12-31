@@ -5,14 +5,15 @@
 class NoiseGenerator
 {
 public:
-	static void Configure(int seed, float frequency);
+	NoiseGenerator(int seed, float frequency, int noiseType = 3, int fractalType = 1, int octaves = 4);
+	~NoiseGenerator();
 
-	static float GetNoise2D(float x, float y);
-	static float GetNoise3D(float x, float y, float z);
+	float GetNoise2D(float x, float y);
+	float GetNoise3D(float x, float y, float z);
+
+	float GetNoise2D(float x, float y) const;
+	float GetNoise3D(float x, float y, float z) const;
 
 private:
-	NoiseGenerator() = delete; // Disable instantiating this class.
-	~NoiseGenerator() = delete;
-
-	static FastNoiseLite s_NoiseGenerator;
+	FastNoiseLite m_Generator;
 };

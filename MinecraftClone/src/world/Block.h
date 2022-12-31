@@ -19,7 +19,17 @@ enum BlockType {
 	GLOWSTONE,
 	SIDE_SNOW,
 	SNOW,
+	BIRCHWOOD,
+	SIDE_BIRCHWOOD,
+	OAKWOOD,
+	SIDE_OAKWOOD,
+	DARKOAKWOOD,
+	SIDE_DARKOAKWOOD,
+	ACACIAWOOD,
+	SIDE_ACACIAWOOD,
 	WATER = 19,
+	OAKLEAVES = 34,
+	GRASSLEAVES = 40,
 	GLASS = 70
 };
 
@@ -47,10 +57,10 @@ class Block
 public:
 	glm::vec3 m_Position; // Global poistion.
 
-	bool m_Solid, m_Translucent;
+	bool m_Solid, m_Translucent, m_SpecialShape;
 
 public:
-	Block(); Block(BlockType type, const glm::vec3& position, bool solid = true, bool translucent = false);
+	Block(); Block(BlockType type, const glm::vec3& position, bool solid = true, bool translucent = false, bool specialShape = false);
 	~Block();
 
 	BlockType GetType();

@@ -1,24 +1,36 @@
 #include "NoiseGenerator.h"
 
-FastNoiseLite NoiseGenerator::s_NoiseGenerator;
-
-void NoiseGenerator::Configure(int seed, float frequency)
+NoiseGenerator::NoiseGenerator(int seed, float frequency, int noiseType, int fractalType, int octaves)
+	: m_Generator()
 {
-	s_NoiseGenerator.SetSeed(seed);
-	s_NoiseGenerator.SetFrequency(frequency);
+	m_Generator.SetSeed(seed);
+	m_Generator.SetFrequency(frequency);
 
-	s_NoiseGenerator.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+	m_Generator.SetNoiseType(FastNoiseLite::NoiseType(noiseType)); // Default is "Perlim".
+	m_Generator.SetFractalType(FastNoiseLite::FractalType(fractalType)); // Default is "FBm".
+	m_Generator.SetFractalOctaves(octaves);
+}
 
-	s_NoiseGenerator.SetFractalType(FastNoiseLite::FractalType_FBm);
-	s_NoiseGenerator.SetFractalOctaves(4);
+NoiseGenerator::~NoiseGenerator()
+{
 }
 
 float NoiseGenerator::GetNoise2D(float x, float y)
 {
-	return s_NoiseGenerator.GetNoise(x, y);
+	return m_Generator.GetNoise(x, y);
 }
 
 float NoiseGenerator::GetNoise3D(float x, float y, float z)
 {
-	return s_NoiseGenerator.GetNoise(x, y, z);
+	return m_Generator.GetNoise(x, y, z);
+}
+
+float NoiseGenerator::GetNoise2D(float x, float y) const
+{
+	return m_Generator.GetNoise(x, y);
+}
+
+float NoiseGenerator::GetNoise3D(float x, float y, float z) const
+{
+	return m_Generator.GetNoise(x, y, z);
 }

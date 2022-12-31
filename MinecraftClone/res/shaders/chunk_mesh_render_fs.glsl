@@ -29,10 +29,11 @@ uniform Light uLight;
 uniform Material uMaterial;
 uniform sampler2D uShadowMap;
 
+uniform float uAlphaThreshold = 0.0;
+
 uniform bool uShaded = false;
 uniform bool uObscured = false;
 
-uniform float uAlphaThreshold = 0.0;
 uniform float uMinimumShadowBias;
 uniform float uFogRadius;
 uniform float uFogDensity;
@@ -133,15 +134,15 @@ void main()
     vec3 specular = uLight.Specular * (specularStr * vec3(specularTexel));
 
     // Claculating shading.
-    if (uShaded)
+    if (uShaded && diffuseTexel.a > (1.0 - uAlphaThreshold)) // FIXME: Temporary solution to dealing with shadows and translucent pixels.
     {
         float shadowingFactor = calcShadowingFactor(lightDir);
 
-        finalPixelColor = vec4(ambient + ((1.0 - shadowingFactor) * (diffuse + specular)), 1.0);
+        finalPixelColor = vec4(ambient + ((1.0 - shadowingFactor) * (diffuse + specular)), diffuseTexel.a);
     }
     else
     {
-        finalPixelColor = vec4(ambient + diffuse + specular, diffuseTexel.a); // FIXME: Review.
+        finalPixelColor = vec4(ambient + diffuse + specular, diffuseTexel.a);
     }
 
     // Calculating obscuration.

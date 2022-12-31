@@ -87,12 +87,12 @@ int Cube::GetMostAlignedFace(const glm::vec3& direction)
 }
 
 Block::Block()
-	: m_Type(BlockType::EMPTY), m_Position(), m_Solid(false), m_Translucent(false)
+	: m_Type(BlockType::EMPTY), m_Position(), m_Solid(false), m_Translucent(false), m_SpecialShape(false)
 {
 }
 
-Block::Block(BlockType type, const glm::vec3& position, bool solid, bool translucent)
-	: m_Type(type), m_Position(position), m_Solid(solid), m_Translucent(translucent)
+Block::Block(BlockType type, const glm::vec3& position, bool solid, bool translucent, bool specialShape)
+	: m_Type(type), m_Position(position), m_Solid(solid), m_Translucent(translucent), m_SpecialShape(specialShape)
 {
 }
 

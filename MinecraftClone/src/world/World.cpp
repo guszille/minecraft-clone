@@ -1,7 +1,7 @@
 #include "World.h"
 
-World::World(int seed)
-	: m_Seed(seed)
+World::World(int seed, float terrainNoiseFrequency, float leavesFrequency, float treesFrequency)
+	: m_Seed(seed), m_TerrainGenerator(seed, terrainNoiseFrequency), m_StructuresConfiguration(leavesFrequency, treesFrequency)
 {
 }
 
@@ -89,7 +89,7 @@ void World::Setup(const std::pair<int, int>& origin, int stride)
 				std::pair<int, int> chunkPosition(i, j);
 				Chunk chunk(chunkPosition);
 
-				chunk.GenerateHeightMap();
+				chunk.GenerateHeightMap(m_TerrainGenerator);
 				chunk.GenerateBlocks();
 
 				InsertChunk(chunk);
@@ -141,6 +141,11 @@ void World::Update(const std::pair<int, int>& origin, int stride, float deltaTim
 		std::pair<int, int> p2 = { chunkPosition.first + 1, chunkPosition.second }; // right
 		std::pair<int, int> p3 = { chunkPosition.first - 1, chunkPosition.second }; // left
 
+		std::pair<int, int> p4 = { chunkPosition.first - 1, chunkPosition.second + 1 }; // front-left
+		std::pair<int, int> p5 = { chunkPosition.first + 1, chunkPosition.second + 1 }; // front-right
+		std::pair<int, int> p6 = { chunkPosition.first - 1, chunkPosition.second - 1 }; // back-left
+		std::pair<int, int> p7 = { chunkPosition.first + 1, chunkPosition.second - 1 }; // back-right
+
 		chunksArround[0] = GetChunkIfExists(p0);
 		chunksArround[1] = GetChunkIfExists(p1);
 		chunksArround[2] = GetChunkIfExists(p2);
@@ -148,16 +153,30 @@ void World::Update(const std::pair<int, int>& origin, int stride, float deltaTim
 
 		Chunk chunk(chunkPosition);
 
-		chunk.GenerateHeightMap();
+		chunk.GenerateHeightMap(m_TerrainGenerator);
+		chunk.GenerateStructures(m_StructuresConfiguration);
 		chunk.GenerateBlocks();
 		chunk.GenerateMesh(chunksArround);
 
 		InsertChunk(chunk);
 
+		UpdateChunkStructures(p0);
+		UpdateChunkStructures(p1);
+		UpdateChunkStructures(p2);
+		UpdateChunkStructures(p3);
+		UpdateChunkStructures(p4);
+		UpdateChunkStructures(p5);
+		UpdateChunkStructures(p6);
+		UpdateChunkStructures(p7);
+
 		UpdateChunkMesh(p0);
 		UpdateChunkMesh(p1);
 		UpdateChunkMesh(p2);
 		UpdateChunkMesh(p3);
+		UpdateChunkMesh(p4);
+		UpdateChunkMesh(p5);
+		UpdateChunkMesh(p6);
+		UpdateChunkMesh(p7);
 
 		m_ChunksToBeLoaded.erase(m_ChunksToBeLoaded.begin());
 	}
@@ -170,6 +189,16 @@ void World::Render(Shader* shaderProgram, MeshType meshTypeToRender)
 	for (it = m_Chunks.begin(); it != m_Chunks.end(); it++)
 	{
 		it->second.Render(shaderProgram, meshTypeToRender);
+	}
+}
+
+void World::UpdateChunkStructures(const std::pair<int, int>& chunkPosition)
+{
+	Chunk* chunk = GetChunkIfExists(chunkPosition);
+
+	if (chunk)
+	{
+		chunk->CheckForGeneratedStructures();
 	}
 }
 
