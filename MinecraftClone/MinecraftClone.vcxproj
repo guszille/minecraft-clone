@@ -153,6 +153,7 @@
     <ClCompile Include="src\graphics\core\TextRendere.cpp" />
     <ClCompile Include="src\physics\AABB.cpp" />
     <ClCompile Include="src\ui\HUD.cpp" />
+    <ClCompile Include="src\util\InventorySystem.cpp" />
     <ClCompile Include="src\util\Player.cpp" />
     <ClCompile Include="src\physics\Ray.cpp" />
     <ClCompile Include="src\world\Chunk.cpp" />
@@ -175,6 +176,7 @@
     <ClInclude Include="src\graphics\core\TextRenderer.h" />
     <ClInclude Include="src\physics\AABB.h" />
     <ClInclude Include="src\ui\HUD.h" />
+    <ClInclude Include="src\util\InventorySystem.h" />
     <ClInclude Include="src\util\Player.h" />
     <ClInclude Include="src\physics\Ray.h" />
     <ClInclude Include="src\world\Chunk.h" />

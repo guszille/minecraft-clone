@@ -2,8 +2,8 @@
 
 std::map<std::pair<int, int>, std::vector<Block>> StructuresHandler::s_Structures;
 
-StructuresProfile::StructuresProfile(float leavesFrequency, float treesFrequency)
-	: m_LeavesFrequency(leavesFrequency), m_TreesFrequency(treesFrequency)
+StructuresProfile::StructuresProfile(float leavesFrequency, float flowersFrequency, float treesFrequency)
+	: m_LeavesFrequency(leavesFrequency), m_FlowersFrequency(flowersFrequency), m_TreesFrequency(treesFrequency)
 {
 }
 

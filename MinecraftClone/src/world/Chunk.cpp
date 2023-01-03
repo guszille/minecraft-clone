@@ -88,7 +88,11 @@ void Chunk::GenerateStructures(const StructuresProfile& configuration)
 
 			if (maxHeight > seaLevel) // Only spawn structures above the sea level.
 			{
-				float chanceToSpawnFlora[2] = { (float)std::rand() / RAND_MAX, (float)std::rand() / RAND_MAX }; // Chances to spawn leaves and trees.
+				float chanceToSpawnFlora[3] = { // Chances to spawn leaves, flowers and trees.
+					(float)std::rand() / RAND_MAX,
+					(float)std::rand() / RAND_MAX,
+					(float)std::rand() / RAND_MAX
+				};
 
 				int xWorldPos = x + chunkWorldPosition[0];
 				int yWorldPos = y + chunkWorldPosition[1];
@@ -100,7 +104,15 @@ void Chunk::GenerateStructures(const StructuresProfile& configuration)
 
 					StructuresHandler::InsertBlockAt(m_Position, Block(BlockType::GRASSLEAVES, blockPosition, false, true, true));
 				}
-				else if (chanceToSpawnFlora[1] <= configuration.m_TreesFrequency)
+				else if (chanceToSpawnFlora[1] <= configuration.m_FlowersFrequency)
+				{
+					int flowerTypeOffset = (int)(6 * (float)std::rand() / RAND_MAX);
+					BlockType blockType = (BlockType)(42 + flowerTypeOffset); // Based in the position of the first flower on texture atlas.
+					glm::vec3 blockPosition(xWorldPos, yWorldPos, zWorldPos);
+
+					StructuresHandler::InsertBlockAt(m_Position, Block(blockType, blockPosition, false, true, true));
+				}
+				else if (chanceToSpawnFlora[2] <= configuration.m_TreesFrequency)
 				{
 					int treeHeight = (int)(treesMinHeight + ((treesMaxHeight - treesMinHeight) * (float)std::rand() / RAND_MAX));
 
@@ -117,13 +129,39 @@ void Chunk::GenerateStructures(const StructuresProfile& configuration)
 						{
 							for (int k = -2; k <= 2; k++)
 							{
-								if (!(i == 0 && j == -2 && k == 0) || !(i == 0 && j == -1 && k == 0))
+								switch (j)
 								{
-									glm::vec3 blockPosition(xWorldPos + i, yWorldPos + j + treeHeight, zWorldPos + k);
-									std::pair<int, int> chunkPosition = GetChunkPositionFromWorld(blockPosition);
+								case -2:
+									if (i == 0 && k == 0) { continue; }
+									else if (i == -2 || i == 2 || k == -2 || k == 2) { continue; }
+									break;
 
-									StructuresHandler::InsertBlockAt(chunkPosition, Block(BlockType::OAKLEAVES, blockPosition, true, true));
+								case -1:
+									if (i == 0 && k == 0) { continue; }
+									else if ((i == -2 && k == -2) || (i == -2 && k == 2) || (i == 2 && k == -2) || (i == 2 && k == 2)) { continue; }
+									break;
+
+								case  0:
+									if ((i == -2 && k == -2) || (i == -2 && k == 2) || (i == 2 && k == -2) || (i == 2 && k == 2)) { continue; }
+									break;
+
+								case  1:
+									if (i == -2 || i == 2 || k == -2 || k == 2) { continue; }
+									break;
+
+								case  2:
+									if (i == -2 || i == 2 || k == -2 || k == 2) { continue; }
+									else if ((i == -1 && k == -1) || (i == -1 && k == 1) || (i == 1 && k == -1) || (i == 1 && k == 1)) { continue; }
+									break;
+
+								default:
+									break;
 								}
+
+								glm::vec3 blockPosition(xWorldPos + i, yWorldPos + j + treeHeight, zWorldPos + k);
+								std::pair<int, int> chunkPosition = GetChunkPositionFromWorld(blockPosition);
+
+								StructuresHandler::InsertBlockAt(chunkPosition, Block(BlockType::OAKLEAVES, blockPosition, true, true));
 							}
 						}
 					}

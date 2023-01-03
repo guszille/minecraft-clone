@@ -1,7 +1,7 @@
 #include "World.h"
 
-World::World(int seed, float terrainNoiseFrequency, float leavesFrequency, float treesFrequency)
-	: m_Seed(seed), m_TerrainGenerator(seed, terrainNoiseFrequency), m_StructuresConfiguration(leavesFrequency, treesFrequency)
+World::World(int seed, float terrainNoiseFrequency, float leavesFrequency, float flowersFrequency, float treesFrequency)
+	: m_Seed(seed), m_TerrainGenerator(seed, terrainNoiseFrequency), m_StructuresConfiguration(leavesFrequency, flowersFrequency, treesFrequency)
 {
 }
 

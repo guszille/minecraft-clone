@@ -1,6 +1,7 @@
 #include "Application.h"
 
 Player* g_Player;
+InventorySystem* g_Inventory;
 
 World* g_World;
 
@@ -39,7 +40,7 @@ int   g_InitialRenderDistance = g_RenderDistance;
 int   g_ViewDistance = 16 * g_RenderDistance; // In blocks.
 
 float g_FogRadius = (float)(g_ViewDistance - 32);
-float g_FogDensity = 0.025f;
+float g_FogDensity = 0.05f;
 
 float g_Gravity = -75.0f;
 float g_Friction = 150.0f;
@@ -62,6 +63,7 @@ Application::Application(unsigned int screenWidth, unsigned int screenHeight)
 Application::~Application()
 {
 	delete g_Player;
+	delete g_Inventory;
 	delete g_World;
 	delete g_HUD;
 	delete g_ShadowMapRenderShader;
@@ -76,8 +78,9 @@ Application::~Application()
 
 void Application::Setup()
 {
-	g_Player = new Player(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), 10.0f, 15.0f, 5.0f);
-	g_World = new World(std::rand(), 0.005f, 0.15f, 0.0015f);
+	g_Player = new Player(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), 10.0f, 15.0f, 10.0f);
+	g_Inventory = new InventorySystem();
+	g_World = new World(std::rand(), 0.005f, 0.1f, 0.015f, 0.0025f);
 	g_Sun = new Sun(glm::vec3(192.0f, 192.0f, 0.0f), glm::vec3(-192.0f, -192.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	g_HUD = new HUD(m_ScreenWidth, m_ScreenHeight);
 	g_ShadowMapRenderShader = new Shader("res/shaders/shadow_map_render_vs.glsl", "res/shaders/shadow_map_render_fs.glsl");
@@ -88,6 +91,13 @@ void Application::Setup()
 	g_ShadowMap = new DepthMap(g_ShadowMapWidth, g_ShadowMapHeight);
 	g_TextRenderer = new TextRenderer(m_ScreenWidth, m_ScreenHeight);
 	g_DepthMapRenderer = new DepthMapRenderer();
+
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::DIRTY, glm::vec3(0.0f)), "Dirty");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::STONE, glm::vec3(0.0f)), "Stone");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::BRICKS, glm::vec3(0.0f)), "Bricks");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::SAND, glm::vec3(0.0f)), "Sand");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::SPRUCEWOODPLANK, glm::vec3(0.0f)), "Spruce Wood Plank");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::GLASS, glm::vec3(0.0f), true, true), "Glass");
 
 	g_World->Setup(std::pair<int, int>(0, 0), g_InitialRenderDistance);
 
@@ -210,6 +220,20 @@ void Application::ProcessInput(float deltaTime)
 		g_Player->CalculateViewDirection(xRotationOffset, yRotationOffset);
 	}
 
+	if (m_Keys[GLFW_KEY_LEFT] && !m_KeysProcessed[GLFW_KEY_LEFT])
+	{
+		g_Inventory->SelectPreviousSlot();
+
+		m_KeysProcessed[GLFW_KEY_LEFT] = true;
+	}
+
+	if (m_Keys[GLFW_KEY_RIGHT] && !m_KeysProcessed[GLFW_KEY_RIGHT])
+	{
+		g_Inventory->SelectNextSlot();
+
+		m_KeysProcessed[GLFW_KEY_RIGHT] = true;
+	}
+
 	if (m_MouseButtons[GLFW_MOUSE_BUTTON_LEFT] && !m_MouseButtonsProcessed[GLFW_MOUSE_BUTTON_LEFT])
 	{
 		const glm::vec3& playerPosition = g_Player->GetPosition();
@@ -234,7 +258,10 @@ void Application::ProcessInput(float deltaTime)
 				newChunkPosition = { chunkPosition.first + intersectedFaceNormal.x, chunkPosition.second + intersectedFaceNormal.z };
 			}
 
-			if (g_World->InsertBlockAt(newChunkPosition, Block(BlockType::GLASS, newWorldBlockPosition, true, true), newLocalBlockPosition))
+			Block newBlock = g_Inventory->GetBlockOnSelectedSlot();
+			newBlock.m_Position = newWorldBlockPosition;
+
+			if (g_World->InsertBlockAt(newChunkPosition, newBlock, newLocalBlockPosition))
 			{
 				g_World->UpdateChunkMesh(newChunkPosition);					
 
@@ -442,18 +469,25 @@ void Application::Render()
 			const glm::vec3& playerPosition = g_Player->GetPosition();
 			const glm::vec3& playerDirection = g_Player->GetViewDirection();
 
+			g_HUD->Render(2);
+
 			std::string debugText1 = "PLAYER POSITION: (" + std::to_string(playerPosition.x) + ", " + std::to_string(playerPosition.y) + ", " + std::to_string(playerPosition.z) + ")";
 			std::string debugText2 = "CAMERA DIRECTION: (" + std::to_string(playerDirection.x) + ", " + std::to_string(playerDirection.y) + ", " + std::to_string(playerDirection.z) + ")";
 			std::string debugText3 = "GAME MODE: " + std::string(m_GameMode == GameMode::DEBUG ? "DEBUG" : "SURVIVAL");
-			std::string debugText4 = "SHADOW BIAS: " + std::to_string(g_MinimumShadowBias);
-			std::string debugText5 = "FOG DENSITY: " + std::to_string(g_FogDensity);
+			std::string debugText4 = "SELECTED BLOCK: " + g_Inventory->GetBlockNameOnSelectedSlot();
 	
-			g_HUD->Render(2);
 			g_TextRenderer->Write(debugText1, 16.0f, 16.0f, 1.0f, glm::vec3(1.0f), 3);
 			g_TextRenderer->Write(debugText2, 16.0f, 32.0f, 1.0f, glm::vec3(1.0f), 3);
 			g_TextRenderer->Write(debugText3, 16.0f, 48.0f, 1.0f, glm::vec3(1.0f), 3);
 			g_TextRenderer->Write(debugText4, 16.0f, 64.0f, 1.0f, glm::vec3(1.0f), 3);
-			g_TextRenderer->Write(debugText5, 16.0f, 80.0f, 1.0f, glm::vec3(1.0f), 3);
+
+			std::string infoText1 = "PRESS F1/F2 TO CHANGE THE GAMEMODE";
+			std::string infoText2 = "PRESS < > TO NAVIGATE THROUGH THE INVENTORY";
+			std::string infoText3 = "PRESS F5 TO SEE THE GENERATED DEPTH MAP";
+
+			g_TextRenderer->Write(infoText1, 16.0f, m_ScreenHeight - 64.0f, 1.0f, glm::vec3(1.0f), 3);
+			g_TextRenderer->Write(infoText2, 16.0f, m_ScreenHeight - 48.0f, 1.0f, glm::vec3(1.0f), 3);
+			g_TextRenderer->Write(infoText3, 16.0f, m_ScreenHeight - 32.0f, 1.0f, glm::vec3(1.0f), 3);
 
 			glDisable(GL_BLEND);
 		}

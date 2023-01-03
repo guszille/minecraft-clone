@@ -26,11 +26,11 @@ void DepthMapRenderer::Render(int textureUnit)
 
 void DepthMapRenderer::InitializeRenderData()
 {
-	float vertices[] = {
-		-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-		 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-		 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-		-1.0f,  1.0f, 0.0f, 0.0f, 1.0f
+	float vertices[] = { // Inverting the "top" and "bottom" of the texture coordinates is a trick to prevent some shadow map artifacts.
+		-1.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+		 1.0f, -1.0f, 0.0f, 1.0f, 1.0f,
+		 1.0f,  1.0f, 0.0f, 1.0f, 0.0f,
+		-1.0f,  1.0f, 0.0f, 0.0f, 0.0f
 	};
 
 	unsigned int indices[] = {

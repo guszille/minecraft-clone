@@ -21,7 +21,7 @@
 class World
 {
 public:
-	World(int seed, float terrainNoiseFrequency, float leavesFrequency, float treesFrequency);
+	World(int seed, float terrainNoiseFrequency, float leavesFrequency, float flowersFrequency, float treesFrequency);
 	~World();
 
 	int GetSeed();

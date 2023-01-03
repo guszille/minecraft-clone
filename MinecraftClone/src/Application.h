@@ -13,6 +13,7 @@
 #include "graphics/core/TextRenderer.h"
 
 #include "util/Player.h"
+#include "util/InventorySystem.h"
 
 #include "world/World.h"
 #include "world/NoiseGenerator.h"

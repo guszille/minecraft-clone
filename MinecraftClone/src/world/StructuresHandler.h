@@ -8,10 +8,10 @@
 struct StructuresProfile
 {
 public:
-	StructuresProfile(float leavesFrequency, float treesFrequency);
+	StructuresProfile(float leavesFrequency, float flowersFrequency, float treesFrequency);
 	~StructuresProfile();
 
-	float m_LeavesFrequency, m_TreesFrequency;
+	float m_LeavesFrequency, m_FlowersFrequency, m_TreesFrequency;
 
 private:
 	// Nothing.
