@@ -45,8 +45,8 @@ public:
 
 	void CheckForGeneratedStructures();
 
-	void GenerateMesh(Chunk* chunksArround[4]);
-	void UpdateMesh(Chunk* chunksArround[4]);
+	void GenerateMesh(Chunk* chunksArround[8]);
+	void UpdateMesh(Chunk* chunksArround[8]);
 
 	void Render(Shader* shaderProgram, MeshType meshType);
 
@@ -65,5 +65,7 @@ private:
 
 	Mesh m_OpaqueMesh, m_TranslucentMesh;
 
-	void SampleRenderableFaces(Chunk* chunksArround[4]);
+	void SampleRenderableFaces(Chunk* chunksArround[8]);
+
+	Block GetBlockCopyFromWorld(const glm::vec3& position, Chunk* chunksArround[8]);
 };

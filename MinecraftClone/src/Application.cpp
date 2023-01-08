@@ -13,6 +13,7 @@ Shader* g_ShadowMapRenderShader;
 Shader* g_ChunkMeshRenderShader;
 Shader* g_PlayerRenderShader;
 Shader* g_CubeRenderShader;
+Shader* g_OcclusionMapRenderShader; // DEBUG.
 
 Texture* g_SpriteSheet;
 
@@ -34,6 +35,7 @@ int   g_ShadowMapWidth = 16384;
 int   g_ShadowMapHeight = 16384;
 float g_MinimumShadowBias = 0.00005f; // To prevent shadow acne.
 bool  g_RenderDepthMap = false;
+bool  g_RenderOcclusionMap = false;
 
 int   g_RenderDistance = 8; // In chunks.
 int   g_InitialRenderDistance = g_RenderDistance;
@@ -70,6 +72,7 @@ Application::~Application()
 	delete g_ChunkMeshRenderShader;
 	delete g_PlayerRenderShader;
 	delete g_CubeRenderShader;
+	delete g_OcclusionMapRenderShader;
 	delete g_SpriteSheet;
 	delete g_ShadowMap;
 	delete g_TextRenderer;
@@ -87,6 +90,7 @@ void Application::Setup()
 	g_ChunkMeshRenderShader = new Shader("res/shaders/chunk_mesh_render_vs.glsl", "res/shaders/chunk_mesh_render_fs.glsl");
 	g_PlayerRenderShader = new Shader("res/shaders/player_render_vs.glsl", "res/shaders/player_render_fs.glsl");
 	g_CubeRenderShader = new Shader("res/shaders/cube_render_vs.glsl", "res/shaders/cube_render_fs.glsl");
+	g_OcclusionMapRenderShader = new Shader("res/shaders/dev/occlusion_map_render_vs.glsl", "res/shaders/dev/occlusion_map_render_fs.glsl");
 	g_SpriteSheet = new Texture("res/textures/minecraft_spritesheet.png");
 	g_ShadowMap = new DepthMap(g_ShadowMapWidth, g_ShadowMapHeight);
 	g_TextRenderer = new TextRenderer(m_ScreenWidth, m_ScreenHeight);
@@ -118,6 +122,7 @@ void Application::Setup()
 	g_ChunkMeshRenderShader->SetUniform1f("uMaterial.Shininess", 64.0f);
 	g_ChunkMeshRenderShader->SetUniform1i("uShadowMap", 1);
 	g_ChunkMeshRenderShader->SetUniform1i("uShaded", 1);
+	g_ChunkMeshRenderShader->SetUniform1i("uOccluded", 1);
 	g_ChunkMeshRenderShader->SetUniform1i("uObscured", 1);
 	g_ChunkMeshRenderShader->SetUniform1f("uAlphaThreshold", 0.05f);
 	g_ChunkMeshRenderShader->SetUniform1f("uFogRadius", g_FogRadius);
@@ -132,6 +137,10 @@ void Application::Setup()
 	g_CubeRenderShader->Bind();
 	g_CubeRenderShader->SetUniformMatrix4fv("uProjectionMatrix", m_CameraProjectionMatrix);
 	g_CubeRenderShader->Unbind();
+
+	g_OcclusionMapRenderShader->Bind();
+	g_OcclusionMapRenderShader->SetUniformMatrix4fv("uProjectionMatrix", m_CameraProjectionMatrix);
+	g_OcclusionMapRenderShader->Unbind();
 
 	g_SpriteSheet->Bind(0); // Keep the main atlas texture on 0 unit position.
 	g_ShadowMap->BindDepthBuffer(1); // Keep the shadow map texture on 1 unit position.
@@ -245,13 +254,13 @@ void Application::ProcessInput(float deltaTime)
 		{
 			std::pair<int, int> chunkPosition = std::get<1>(i);
 			glm::ivec3 localBlockPosition = std::get<2>(i);
-			glm::vec3 globalBlockPosition = std::get<3>(i);
+			glm::fvec3 globalBlockPosition = std::get<3>(i);
 			int intersectedFace = std::get<4>(i);
 			glm::ivec3 intersectedFaceNormal = Cube::s_Normals[intersectedFace];
 
 			std::pair<int, int> newChunkPosition = chunkPosition;
 			glm::ivec3 newLocalBlockPosition = Chunk::GetNextLocalBlockPosition(localBlockPosition, intersectedFaceNormal);
-			glm::vec3 newWorldBlockPosition = globalBlockPosition + (glm::vec3)intersectedFaceNormal;
+			glm::fvec3 newGlobalBlockPosition = globalBlockPosition + (glm::vec3)intersectedFaceNormal;
 
 			if (!Chunk::IsAValidPosition(localBlockPosition + Cube::s_Normals[intersectedFace]))
 			{
@@ -259,7 +268,7 @@ void Application::ProcessInput(float deltaTime)
 			}
 
 			Block newBlock = g_Inventory->GetBlockOnSelectedSlot();
-			newBlock.m_Position = newWorldBlockPosition;
+			newBlock.m_Position = newGlobalBlockPosition;
 
 			if (g_World->InsertBlockAt(newChunkPosition, newBlock, newLocalBlockPosition))
 			{
@@ -349,6 +358,13 @@ void Application::ProcessInput(float deltaTime)
 		m_KeysProcessed[GLFW_KEY_F5] = true;
 	}
 
+	if (m_Keys[GLFW_KEY_F6] && !m_KeysProcessed[GLFW_KEY_F6])
+	{
+		g_RenderOcclusionMap = !g_RenderOcclusionMap;
+
+		m_KeysProcessed[GLFW_KEY_F6] = true;
+	}
+
 	if (m_Keys[GLFW_KEY_KP_SUBTRACT] && !m_KeysProcessed[GLFW_KEY_KP_SUBTRACT])
 	{
 		g_MinimumShadowBias -= 0.00001f;
@@ -410,6 +426,26 @@ void Application::Render()
 		g_DepthMapRenderer->Render(1);
 
 		glDisable(GL_DEPTH_TEST);
+	}
+	else if (g_RenderOcclusionMap) // DEBUG: Render occlusion map.
+	{
+		glViewport(0, 0, m_ScreenWidth, m_ScreenHeight); // Reset viewport.
+
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
+
+		glClearColor(g_ClearColor.x, g_ClearColor.y, g_ClearColor.z, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		g_OcclusionMapRenderShader->Bind();
+		g_OcclusionMapRenderShader->SetUniformMatrix4fv("uViewMatrix", g_Player->GetViewMatrix());
+
+		g_World->Render(g_OcclusionMapRenderShader, MeshType::OPAQUE);
+
+		g_OcclusionMapRenderShader->Unbind();
+
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
 	}
 	else
 	{
@@ -483,11 +519,13 @@ void Application::Render()
 
 			std::string infoText1 = "PRESS F1/F2 TO CHANGE THE GAMEMODE";
 			std::string infoText2 = "PRESS < > TO NAVIGATE THROUGH THE INVENTORY";
-			std::string infoText3 = "PRESS F5 TO SEE THE GENERATED DEPTH MAP";
+			std::string infoText3 = "PRESS F5 TO SHOW/HIDE THE DEPTH/SHADOW MAP";
+			std::string infoText4 = "PRESS F6 TO SHOW/HIDE THE OCCLUSION MAP";
 
-			g_TextRenderer->Write(infoText1, 16.0f, m_ScreenHeight - 64.0f, 1.0f, glm::vec3(1.0f), 3);
-			g_TextRenderer->Write(infoText2, 16.0f, m_ScreenHeight - 48.0f, 1.0f, glm::vec3(1.0f), 3);
-			g_TextRenderer->Write(infoText3, 16.0f, m_ScreenHeight - 32.0f, 1.0f, glm::vec3(1.0f), 3);
+			g_TextRenderer->Write(infoText1, 16.0f, m_ScreenHeight - 80.0f, 1.0f, glm::vec3(1.0f), 3);
+			g_TextRenderer->Write(infoText2, 16.0f, m_ScreenHeight - 64.0f, 1.0f, glm::vec3(1.0f), 3);
+			g_TextRenderer->Write(infoText3, 16.0f, m_ScreenHeight - 48.0f, 1.0f, glm::vec3(1.0f), 3);
+			g_TextRenderer->Write(infoText4, 16.0f, m_ScreenHeight - 32.0f, 1.0f, glm::vec3(1.0f), 3);
 
 			glDisable(GL_BLEND);
 		}

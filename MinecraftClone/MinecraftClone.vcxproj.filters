@@ -153,5 +153,7 @@
     <None Include="res\shaders\dev\depth_map_render_fs.glsl" />
     <None Include="res\shaders\cube_render_vs.glsl" />
     <None Include="res\shaders\cube_render_fs.glsl" />
+    <None Include="res\shaders\dev\occlusion_map_render_vs.glsl" />
+    <None Include="res\shaders\dev\occlusion_map_render_fs.glsl" />
   </ItemGroup>
 </Project>

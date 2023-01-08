@@ -134,13 +134,12 @@ void World::Update(const std::pair<int, int>& origin, int stride, float deltaTim
 	if (!m_ChunksToBeLoaded.empty())
 	{
 		std::pair<int, int> chunkPosition = m_ChunksToBeLoaded.at(0);
-		Chunk* chunksArround[4];
+		Chunk* chunksArround[8];
 
 		std::pair<int, int> p0 = { chunkPosition.first, chunkPosition.second + 1 }; // front
 		std::pair<int, int> p1 = { chunkPosition.first, chunkPosition.second - 1 }; // back
 		std::pair<int, int> p2 = { chunkPosition.first + 1, chunkPosition.second }; // right
 		std::pair<int, int> p3 = { chunkPosition.first - 1, chunkPosition.second }; // left
-
 		std::pair<int, int> p4 = { chunkPosition.first - 1, chunkPosition.second + 1 }; // front-left
 		std::pair<int, int> p5 = { chunkPosition.first + 1, chunkPosition.second + 1 }; // front-right
 		std::pair<int, int> p6 = { chunkPosition.first - 1, chunkPosition.second - 1 }; // back-left
@@ -150,6 +149,10 @@ void World::Update(const std::pair<int, int>& origin, int stride, float deltaTim
 		chunksArround[1] = GetChunkIfExists(p1);
 		chunksArround[2] = GetChunkIfExists(p2);
 		chunksArround[3] = GetChunkIfExists(p3);
+		chunksArround[4] = GetChunkIfExists(p4);
+		chunksArround[5] = GetChunkIfExists(p5);
+		chunksArround[6] = GetChunkIfExists(p6);
+		chunksArround[7] = GetChunkIfExists(p7);
 
 		Chunk chunk(chunkPosition);
 
@@ -208,17 +211,25 @@ void World::GenerateMeshes()
 
 	for (it = m_Chunks.begin(); it != m_Chunks.end(); it++)
 	{
-		Chunk* chunksArround[4];
+		Chunk* chunksArround[8];
 
 		std::pair<int, int> p0 = { it->second.m_Position.first, it->second.m_Position.second + 1 }; // front
 		std::pair<int, int> p1 = { it->second.m_Position.first, it->second.m_Position.second - 1 }; // back
 		std::pair<int, int> p2 = { it->second.m_Position.first + 1, it->second.m_Position.second }; // right
 		std::pair<int, int> p3 = { it->second.m_Position.first - 1, it->second.m_Position.second }; // left
+		std::pair<int, int> p4 = { it->second.m_Position.first - 1, it->second.m_Position.second + 1 }; // front-left
+		std::pair<int, int> p5 = { it->second.m_Position.first + 1, it->second.m_Position.second + 1 }; // front-right
+		std::pair<int, int> p6 = { it->second.m_Position.first - 1, it->second.m_Position.second - 1 }; // back-left
+		std::pair<int, int> p7 = { it->second.m_Position.first + 1, it->second.m_Position.second - 1 }; // back-right
 
 		chunksArround[0] = GetChunkIfExists(p0);
 		chunksArround[1] = GetChunkIfExists(p1);
 		chunksArround[2] = GetChunkIfExists(p2);
 		chunksArround[3] = GetChunkIfExists(p3);
+		chunksArround[4] = GetChunkIfExists(p4);
+		chunksArround[5] = GetChunkIfExists(p5);
+		chunksArround[6] = GetChunkIfExists(p6);
+		chunksArround[7] = GetChunkIfExists(p7);
 
 		it->second.GenerateMesh(chunksArround);
 	}
@@ -230,17 +241,25 @@ void World::UpdateChunkMesh(const std::pair<int, int>& chunkPosition)
 
 	if (chunk)
 	{
-		Chunk* chunksArround[4];
+		Chunk* chunksArround[8];
 
 		std::pair<int, int> p0 = { chunk->m_Position.first, chunk->m_Position.second + 1 }; // front
 		std::pair<int, int> p1 = { chunk->m_Position.first, chunk->m_Position.second - 1 }; // back
 		std::pair<int, int> p2 = { chunk->m_Position.first + 1, chunk->m_Position.second }; // right
 		std::pair<int, int> p3 = { chunk->m_Position.first - 1, chunk->m_Position.second }; // left
+		std::pair<int, int> p4 = { chunk->m_Position.first - 1, chunk->m_Position.second + 1 }; // front-left
+		std::pair<int, int> p5 = { chunk->m_Position.first + 1, chunk->m_Position.second + 1 }; // front-right
+		std::pair<int, int> p6 = { chunk->m_Position.first - 1, chunk->m_Position.second - 1 }; // back-left
+		std::pair<int, int> p7 = { chunk->m_Position.first + 1, chunk->m_Position.second - 1 }; // back-right
 
 		chunksArround[0] = GetChunkIfExists(p0);
 		chunksArround[1] = GetChunkIfExists(p1);
 		chunksArround[2] = GetChunkIfExists(p2);
 		chunksArround[3] = GetChunkIfExists(p3);
+		chunksArround[4] = GetChunkIfExists(p4);
+		chunksArround[5] = GetChunkIfExists(p5);
+		chunksArround[6] = GetChunkIfExists(p6);
+		chunksArround[7] = GetChunkIfExists(p7);
 
 		chunk->UpdateMesh(chunksArround);
 	}

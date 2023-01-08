@@ -23,6 +23,7 @@ in VS_OUT {
     vec3 Normal;
     vec2 TexCoords;
     vec4 FragPosLightSpace;
+    float Occlusion;
 } fs_in;
 
 uniform Light uLight;
@@ -32,6 +33,7 @@ uniform sampler2D uShadowMap;
 uniform float uAlphaThreshold = 0.0;
 
 uniform bool uShaded = false;
+uniform bool uOccluded = false;
 uniform bool uObscured = false;
 
 uniform float uMinimumShadowBias;
@@ -137,8 +139,17 @@ void main()
     if (uShaded && diffuseTexel.a > (1.0 - uAlphaThreshold)) // FIXME: Temporary solution to dealing with shadows and translucent pixels.
     {
         float shadowingFactor = calcShadowingFactor(lightDir);
-
+        
         finalPixelColor = vec4(ambient + ((1.0 - shadowingFactor) * (diffuse + specular)), diffuseTexel.a);
+
+        // Calculating fragment occlusion.
+        if (uOccluded)
+        {
+            const float occlusionStrength = 1.0; // For a while, keep it constant.
+            float occlusionFactor = fs_in.Occlusion * occlusionStrength;
+
+            finalPixelColor = vec4((1.0 - occlusionFactor) * finalPixelColor.rgb, finalPixelColor.a);
+        }
     }
     else
     {

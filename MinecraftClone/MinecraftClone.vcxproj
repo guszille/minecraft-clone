@@ -107,6 +107,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -137,6 +138,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -197,6 +199,8 @@
     <None Include="res\shaders\cube_render_vs.glsl" />
     <None Include="res\shaders\dev\depth_map_render_fs.glsl" />
     <None Include="res\shaders\dev\depth_map_render_vs.glsl" />
+    <None Include="res\shaders\dev\occlusion_map_render_fs.glsl" />
+    <None Include="res\shaders\dev\occlusion_map_render_vs.glsl" />
     <None Include="res\shaders\player_render_fs.glsl" />
     <None Include="res\shaders\player_render_vs.glsl" />
     <None Include="res\shaders\shadow_map_render_fs.glsl" />
