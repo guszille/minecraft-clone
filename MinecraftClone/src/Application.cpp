@@ -83,7 +83,7 @@ void Application::Setup()
 {
 	g_Player = new Player(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), 10.0f, 15.0f, 10.0f);
 	g_Inventory = new InventorySystem();
-	g_World = new World(std::rand(), 0.005f, 0.1f, 0.015f, 0.0025f);
+	g_World = new World(std::rand(), 0.005f, 0.035f, 0.01f, 0.0025f);
 	g_Sun = new Sun(glm::vec3(192.0f, 192.0f, 0.0f), glm::vec3(-192.0f, -192.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	g_HUD = new HUD(m_ScreenWidth, m_ScreenHeight);
 	g_ShadowMapRenderShader = new Shader("res/shaders/shadow_map_render_vs.glsl", "res/shaders/shadow_map_render_fs.glsl");
