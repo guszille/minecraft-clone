@@ -37,7 +37,7 @@ float g_MinimumShadowBias = 0.00005f; // To prevent shadow acne.
 bool  g_RenderDepthMap = false;
 bool  g_RenderOcclusionMap = false;
 
-int   g_RenderDistance = 8; // In chunks.
+int   g_RenderDistance = 16; // In chunks.
 int   g_InitialRenderDistance = g_RenderDistance;
 int   g_ViewDistance = 16 * g_RenderDistance; // In blocks.
 
@@ -96,11 +96,21 @@ void Application::Setup()
 	g_TextRenderer = new TextRenderer(m_ScreenWidth, m_ScreenHeight);
 	g_DepthMapRenderer = new DepthMapRenderer();
 
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::GRASS, glm::vec3(0.0f)), "Grass");
 	g_Inventory->InsertBlockAtEnd(Block(BlockType::DIRTY, glm::vec3(0.0f)), "Dirty");
 	g_Inventory->InsertBlockAtEnd(Block(BlockType::STONE, glm::vec3(0.0f)), "Stone");
 	g_Inventory->InsertBlockAtEnd(Block(BlockType::BRICKS, glm::vec3(0.0f)), "Bricks");
 	g_Inventory->InsertBlockAtEnd(Block(BlockType::SAND, glm::vec3(0.0f)), "Sand");
-	g_Inventory->InsertBlockAtEnd(Block(BlockType::SPRUCEWOODPLANK, glm::vec3(0.0f)), "Spruce Wood Plank");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::BIRCHWOODPLANK, glm::vec3(0.0f)), "Birch Wood Plank");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::OAKWOOKPLANK, glm::vec3(0.0f)), "Oak Wood Plank");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::DARKOAKWOOKPLANK, glm::vec3(0.0f)), "Dark Oak Wood Plank");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::ACACIAWOODPLANK, glm::vec3(0.0f)), "Acacia Wood Plank");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::GRASSLEAVES, glm::vec3(0.0f), false, true, true), "Grass Leaves");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::ORANGETULIP, glm::vec3(0.0f), false, true, true), "Orange Tulip");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::PINKTULIP, glm::vec3(0.0f), false, true, true), "Pink Tulip");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::REDTULIP, glm::vec3(0.0f), false, true, true), "Red Tulip");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::POPPY, glm::vec3(0.0f), false, true, true), "Poppy");
+	g_Inventory->InsertBlockAtEnd(Block(BlockType::SUNFLOWER, glm::vec3(0.0f), false, true, true), "Sunflower");
 	g_Inventory->InsertBlockAtEnd(Block(BlockType::GLASS, glm::vec3(0.0f), true, true), "Glass");
 
 	g_World->Setup(std::pair<int, int>(0, 0), g_InitialRenderDistance);
@@ -128,6 +138,7 @@ void Application::Setup()
 	g_ChunkMeshRenderShader->SetUniform1f("uFogRadius", g_FogRadius);
 	g_ChunkMeshRenderShader->SetUniform1f("uFogDensity", g_FogDensity);
 	g_ChunkMeshRenderShader->SetUniform3f("uFogColor", g_ClearColor); // Same as the clear color or skybox texture.
+	g_ChunkMeshRenderShader->SetUniform1i("uAiming", 0);
 	g_ChunkMeshRenderShader->Unbind();
 
 	g_PlayerRenderShader->Bind();
@@ -169,6 +180,7 @@ void Application::Setup()
 void Application::Update(float deltaTime)
 {
 	const glm::vec3& playerPosition = g_Player->GetPosition();
+	const glm::vec3& playerDirection = g_Player->GetViewDirection();
 	std::pair<int, int> origin = Chunk::GetChunkPositionFromWorld(playerPosition);
 
 	g_World->Update(origin, g_RenderDistance, deltaTime);
@@ -178,7 +190,25 @@ void Application::Update(float deltaTime)
 		g_Player->Update(g_World, g_Gravity, g_Friction, deltaTime);
 	}
 
-	g_Sun->SetPosition(glm::vec3(playerPosition.x, 0.0f, playerPosition.z));
+	g_Sun->SetPosition(glm::vec3(playerPosition.x, 0.0f, playerPosition.z)); // Following the player.
+
+	Intersection i = g_World->CastRay(playerPosition + (playerDirection * g_NearPlane), playerDirection, g_Player->m_Range);
+
+	if (std::get<0>(i))
+	{
+		glm::fvec3 globalBlockPosition = std::get<3>(i);
+
+		g_ChunkMeshRenderShader->Bind();
+		g_ChunkMeshRenderShader->SetUniform1i("uAiming", 1);
+		g_ChunkMeshRenderShader->SetUniform3f("uAimedBlockPosition", globalBlockPosition);
+		g_ChunkMeshRenderShader->Unbind();
+	}
+	else
+	{
+		g_ChunkMeshRenderShader->Bind();
+		g_ChunkMeshRenderShader->SetUniform1i("uAiming", 0);
+		g_ChunkMeshRenderShader->Unbind();
+	}
 }
 
 void Application::ProcessInput(float deltaTime)
@@ -517,15 +547,17 @@ void Application::Render()
 			g_TextRenderer->Write(debugText3, 16.0f, 48.0f, 1.0f, glm::vec3(1.0f), 3);
 			g_TextRenderer->Write(debugText4, 16.0f, 64.0f, 1.0f, glm::vec3(1.0f), 3);
 
-			std::string infoText1 = "PRESS F1/F2 TO CHANGE THE GAMEMODE";
-			std::string infoText2 = "PRESS < > TO NAVIGATE THROUGH THE INVENTORY";
-			std::string infoText3 = "PRESS F5 TO SHOW/HIDE THE DEPTH/SHADOW MAP";
-			std::string infoText4 = "PRESS F6 TO SHOW/HIDE THE OCCLUSION MAP";
+			std::string infoText1 = "PRESS 'F1/F2' TO CHANGE THE GAMEMODE";
+			std::string infoText2 = "PRESS '<' '>' TO NAVIGATE THROUGH THE INVENTORY";
+			std::string infoText3 = "PRESS 'F5' TO SHOW/HIDE THE DEPTH/SHADOW MAP";
+			std::string infoText4 = "PRESS 'F6' TO SHOW/HIDE THE OCCLUSION MAP";
+			std::string infoText5 = "PRESS 'ESC' TO QUIT";
 
-			g_TextRenderer->Write(infoText1, 16.0f, m_ScreenHeight - 80.0f, 1.0f, glm::vec3(1.0f), 3);
-			g_TextRenderer->Write(infoText2, 16.0f, m_ScreenHeight - 64.0f, 1.0f, glm::vec3(1.0f), 3);
-			g_TextRenderer->Write(infoText3, 16.0f, m_ScreenHeight - 48.0f, 1.0f, glm::vec3(1.0f), 3);
-			g_TextRenderer->Write(infoText4, 16.0f, m_ScreenHeight - 32.0f, 1.0f, glm::vec3(1.0f), 3);
+			g_TextRenderer->Write(infoText1, 16.0f, m_ScreenHeight - 96.0f, 1.0f, glm::vec3(1.0f), 3);
+			g_TextRenderer->Write(infoText2, 16.0f, m_ScreenHeight - 80.0f, 1.0f, glm::vec3(1.0f), 3);
+			g_TextRenderer->Write(infoText3, 16.0f, m_ScreenHeight - 64.0f, 1.0f, glm::vec3(1.0f), 3);
+			g_TextRenderer->Write(infoText4, 16.0f, m_ScreenHeight - 48.0f, 1.0f, glm::vec3(1.0f), 3);
+			g_TextRenderer->Write(infoText5, 16.0f, m_ScreenHeight - 32.0f, 1.0f, glm::vec3(1.0f), 3);
 
 			glDisable(GL_BLEND);
 		}

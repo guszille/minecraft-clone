@@ -76,7 +76,7 @@ void Chunk::GenerateHeightMap(const NoiseGenerator& generator, int minYPosition)
 void Chunk::GenerateStructures(const StructuresProfile& configuration)
 {
 	int chunkWorldPosition[3] = { m_Position.first * s_DefaultDimensions.x, s_DefaultYPosition, m_Position.second * s_DefaultDimensions.z };
-	int treesMinHeight = 5, treesMaxHeight = 8; // WARNING: Hard-coded values.
+	int treesMinHeight = 3, treesMaxHeight = 8; // WARNING: Hard-coded values.
 	int seaLevel = s_DefaultYPosition + s_DefaultDimensions.y;
 
 	for (int x = 0; x < s_DefaultDimensions.x; x++)
@@ -106,8 +106,8 @@ void Chunk::GenerateStructures(const StructuresProfile& configuration)
 				}
 				else if (chanceToSpawnFlora[1] <= configuration.m_FlowersFrequency)
 				{
-					int flowerTypeOffset = (int)(6 * (float)std::rand() / RAND_MAX);
-					BlockType blockType = (BlockType)(42 + flowerTypeOffset); // Based in the position of the first flower on texture atlas.
+					int flowerTypeOffset = (int)(7 * (float)std::rand() / RAND_MAX);
+					BlockType blockType = (BlockType)(41 + flowerTypeOffset); // Based in the position of the first flower on texture atlas.
 					glm::vec3 blockPosition(xWorldPos, yWorldPos, zWorldPos);
 
 					StructuresHandler::InsertBlockAt(m_Position, Block(blockType, blockPosition, false, true, true));
@@ -283,8 +283,12 @@ void Chunk::Render(Shader* shaderProgram, MeshType meshTypeToRender)
 Intersection Chunk::Intersect(const Ray& ray)
 {
 	Intersection chunkIntersection = std::make_tuple(false, std::make_pair(0, 0), glm::ivec3(0), glm::vec3(0.0f), -1);
+	std::vector<BlockType> intersectionBlackList;
 	float distanceToClosestBlock = 0.0f;
 
+	intersectionBlackList.push_back(BlockType::EMPTY);
+	intersectionBlackList.push_back(BlockType::WATER);
+	
 	for (int x = 0; x < s_DefaultDimensions.x; x++)
 	{
 		for (int y = 0; y < s_DefaultDimensions.y; y++)
@@ -292,8 +296,18 @@ Intersection Chunk::Intersect(const Ray& ray)
 			for (int z = 0; z < s_DefaultDimensions.z; z++)
 			{
 				Block& block = m_Blocks[x][y][z];
+				bool onBlackList = false;
 
-				if (block.GetType() != BlockType::EMPTY && block.m_Solid)
+				for (const BlockType& blockType : intersectionBlackList)
+				{
+					if (block.GetType() == blockType)
+					{
+						onBlackList = true;
+						break;
+					}
+				}
+
+				if (!onBlackList)
 				{
 					float distanceToCurrBlock = glm::length(block.m_Position - ray.m_Origin);
 

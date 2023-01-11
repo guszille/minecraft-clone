@@ -43,6 +43,9 @@ uniform vec3 uFogColor;
 
 uniform vec3 uViewPos;
 
+uniform bool uAiming = false;
+uniform vec3 uAimedBlockPosition;
+
 out vec4 FragColor;
 
 float calcShadowingFactor(vec3 lightDir)
@@ -107,6 +110,21 @@ float calcFogFactor()
     return clamp(exp2Factor, 0.0, 1.0);
 }
 
+bool isFragmentAimed()
+{
+    if (uAiming)
+    {
+        if (uAimedBlockPosition.x - 0.5001 <= fs_in.FragPosModelSpace.x && uAimedBlockPosition.x + 0.5001 >= fs_in.FragPosModelSpace.x &&
+            uAimedBlockPosition.y - 0.5001 <= fs_in.FragPosModelSpace.y && uAimedBlockPosition.y + 0.5001 >= fs_in.FragPosModelSpace.y &&
+            uAimedBlockPosition.z - 0.5001 <= fs_in.FragPosModelSpace.z && uAimedBlockPosition.z + 0.5001 >= fs_in.FragPosModelSpace.z)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void main()
 {
     vec4 finalPixelColor = vec4(0.0);
@@ -162,6 +180,12 @@ void main()
         float fogFactor = calcFogFactor();
 
         finalPixelColor = mix(vec4(uFogColor, 1.0), finalPixelColor, fogFactor);
+    }
+
+    // Checking if the fragment belongs to the aimed block.
+    if (isFragmentAimed())
+    {
+        finalPixelColor = vec4(1.25 * finalPixelColor.rgb, finalPixelColor.a);
     }
 
     FragColor = finalPixelColor;
