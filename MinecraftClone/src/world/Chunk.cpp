@@ -1,7 +1,7 @@
 #include "Chunk.h"
 
-glm::ivec3 Chunk::s_DefaultDimensions(16, 256, 16);
-int Chunk::s_DefaultYPosition = -128;
+glm::ivec3 Chunk::s_DefaultDimensions(16, 128, 16);
+int Chunk::s_DefaultYPosition = -64;
 int Chunk::s_DefaultLayerSize = 8;
 
 Chunk::Chunk(const std::pair<int, int>& position)
@@ -708,8 +708,8 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 								glm::vec3 n = (glm::vec3)Cube::s_Normals[faceIndex];
 								std::array<glm::vec2, 4> uv = Block::GenerateTexCoords(block.GetType());
 
-								float occlusion[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // Vertices ambient occlusion.
 								unsigned int* indices = Cube::s_Indices; // Same indices to all block faces.
+								float occlusion = 0.0f; // Vertices ambient occlusion.
 
 								if (!block.m_Translucent) // Opaque mesh.
 								{
@@ -749,11 +749,17 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 										Block side1Block = GetBlockCopyFromWorld(block.m_Position + sideBlocksDirections[1], chunksArround);
 										Block side2Block = GetBlockCopyFromWorld(block.m_Position + sideBlocksDirections[2], chunksArround);
 
-										float side0Factor = side0Block.GetType() != BlockType::EMPTY && !side0Block.m_Translucent ? 0.15f : 0.0f;
-										float side1Factor = side1Block.GetType() != BlockType::EMPTY && !side1Block.m_Translucent ? 0.15f : 0.0f;
-										float side2Factor = side2Block.GetType() != BlockType::EMPTY && !side2Block.m_Translucent ? 0.05f : 0.0f; // Corner.
+										bool occluded = false;
+										occluded |= side0Block.GetType() != BlockType::EMPTY && !side0Block.m_Translucent;
+										occluded |= side1Block.GetType() != BlockType::EMPTY && !side1Block.m_Translucent;
+										occluded |= side2Block.GetType() != BlockType::EMPTY && !side2Block.m_Translucent;
 
-										occlusion[vertexIndex] = std::min(side0Factor + side1Factor + side2Factor, 0.3f); // Corner shadow to simulate ambient occlusion.
+										if (occluded)
+										{
+											occlusion = 0.05f; // Corner shadow to simulate ambient occlusion.
+
+											break;
+										}
 									}
 									
 									if (block.GetType() == BlockType::GRASS)
@@ -781,7 +787,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 									m_OpaqueMesh.m_Vertices.push_back(n.z);
 									m_OpaqueMesh.m_Vertices.push_back(uv[0].x);
 									m_OpaqueMesh.m_Vertices.push_back(uv[0].y);
-									m_OpaqueMesh.m_Vertices.push_back(occlusion[0]);
+									m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 									m_OpaqueMesh.m_Vertices.push_back(v1.x);
 									m_OpaqueMesh.m_Vertices.push_back(v1.y);
@@ -791,7 +797,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 									m_OpaqueMesh.m_Vertices.push_back(n.z);
 									m_OpaqueMesh.m_Vertices.push_back(uv[1].x);
 									m_OpaqueMesh.m_Vertices.push_back(uv[1].y);
-									m_OpaqueMesh.m_Vertices.push_back(occlusion[1]);
+									m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 									m_OpaqueMesh.m_Vertices.push_back(v2.x);
 									m_OpaqueMesh.m_Vertices.push_back(v2.y);
@@ -801,7 +807,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 									m_OpaqueMesh.m_Vertices.push_back(n.z);
 									m_OpaqueMesh.m_Vertices.push_back(uv[2].x);
 									m_OpaqueMesh.m_Vertices.push_back(uv[2].y);
-									m_OpaqueMesh.m_Vertices.push_back(occlusion[2]);
+									m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 									m_OpaqueMesh.m_Vertices.push_back(v3.x);
 									m_OpaqueMesh.m_Vertices.push_back(v3.y);
@@ -811,7 +817,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 									m_OpaqueMesh.m_Vertices.push_back(n.z);
 									m_OpaqueMesh.m_Vertices.push_back(uv[3].x);
 									m_OpaqueMesh.m_Vertices.push_back(uv[3].y);
-									m_OpaqueMesh.m_Vertices.push_back(occlusion[3]);
+									m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 									m_OpaqueMesh.m_Indices.push_back(indices[0] + (m_OpaqueMesh.m_NumberOfFaces * 4));
 									m_OpaqueMesh.m_Indices.push_back(indices[1] + (m_OpaqueMesh.m_NumberOfFaces * 4));
@@ -832,7 +838,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 									m_TranslucentMesh.m_Vertices.push_back(n.z);
 									m_TranslucentMesh.m_Vertices.push_back(uv[0].x);
 									m_TranslucentMesh.m_Vertices.push_back(uv[0].y);
-									m_TranslucentMesh.m_Vertices.push_back(occlusion[0]);
+									m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 									m_TranslucentMesh.m_Vertices.push_back(v1.x);
 									m_TranslucentMesh.m_Vertices.push_back(v1.y);
@@ -842,7 +848,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 									m_TranslucentMesh.m_Vertices.push_back(n.z);
 									m_TranslucentMesh.m_Vertices.push_back(uv[1].x);
 									m_TranslucentMesh.m_Vertices.push_back(uv[1].y);
-									m_TranslucentMesh.m_Vertices.push_back(occlusion[1]);
+									m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 									m_TranslucentMesh.m_Vertices.push_back(v2.x);
 									m_TranslucentMesh.m_Vertices.push_back(v2.y);
@@ -852,7 +858,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 									m_TranslucentMesh.m_Vertices.push_back(n.z);
 									m_TranslucentMesh.m_Vertices.push_back(uv[2].x);
 									m_TranslucentMesh.m_Vertices.push_back(uv[2].y);
-									m_TranslucentMesh.m_Vertices.push_back(occlusion[2]);
+									m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 									m_TranslucentMesh.m_Vertices.push_back(v3.x);
 									m_TranslucentMesh.m_Vertices.push_back(v3.y);
@@ -862,7 +868,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 									m_TranslucentMesh.m_Vertices.push_back(n.z);
 									m_TranslucentMesh.m_Vertices.push_back(uv[3].x);
 									m_TranslucentMesh.m_Vertices.push_back(uv[3].y);
-									m_TranslucentMesh.m_Vertices.push_back(occlusion[3]);
+									m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 									m_TranslucentMesh.m_Indices.push_back(indices[0] + (m_TranslucentMesh.m_NumberOfFaces * 4));
 									m_TranslucentMesh.m_Indices.push_back(indices[1] + (m_TranslucentMesh.m_NumberOfFaces * 4));
@@ -894,8 +900,8 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 						glm::vec3 n1 = glm::normalize(glm::vec3(1.0f, 0.0f, -1.0f));
 						std::array<glm::vec2, 4> uv = Block::GenerateTexCoords(block.GetType());
 
-						float occlusion[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // Vertices ambient occlusion.
 						unsigned int* indices = Cube::s_Indices; // Same indices to all block faces.
+						float occlusion = 0.0f; // Vertices ambient occlusion.
 
 						if (!block.m_Translucent) // Opaque mesh.
 						{
@@ -907,7 +913,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_OpaqueMesh.m_Vertices.push_back(n0.z);
 							m_OpaqueMesh.m_Vertices.push_back(uv[0].x);
 							m_OpaqueMesh.m_Vertices.push_back(uv[0].y);
-							m_OpaqueMesh.m_Vertices.push_back(occlusion[0]);
+							m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 							m_OpaqueMesh.m_Vertices.push_back(v4.x);
 							m_OpaqueMesh.m_Vertices.push_back(v4.y);
@@ -917,7 +923,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_OpaqueMesh.m_Vertices.push_back(n0.z);
 							m_OpaqueMesh.m_Vertices.push_back(uv[1].x);
 							m_OpaqueMesh.m_Vertices.push_back(uv[1].y);
-							m_OpaqueMesh.m_Vertices.push_back(occlusion[1]);
+							m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 							m_OpaqueMesh.m_Vertices.push_back(v7.x);
 							m_OpaqueMesh.m_Vertices.push_back(v7.y);
@@ -927,7 +933,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_OpaqueMesh.m_Vertices.push_back(n0.z);
 							m_OpaqueMesh.m_Vertices.push_back(uv[2].x);
 							m_OpaqueMesh.m_Vertices.push_back(uv[2].y);
-							m_OpaqueMesh.m_Vertices.push_back(occlusion[2]);
+							m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 							m_OpaqueMesh.m_Vertices.push_back(v3.x);
 							m_OpaqueMesh.m_Vertices.push_back(v3.y);
@@ -937,7 +943,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_OpaqueMesh.m_Vertices.push_back(n0.z);
 							m_OpaqueMesh.m_Vertices.push_back(uv[3].x);
 							m_OpaqueMesh.m_Vertices.push_back(uv[3].y);
-							m_OpaqueMesh.m_Vertices.push_back(occlusion[3]);
+							m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 							m_OpaqueMesh.m_Indices.push_back(indices[0] + (m_OpaqueMesh.m_NumberOfFaces * 4));
 							m_OpaqueMesh.m_Indices.push_back(indices[1] + (m_OpaqueMesh.m_NumberOfFaces * 4));
@@ -956,7 +962,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_OpaqueMesh.m_Vertices.push_back(n1.z);
 							m_OpaqueMesh.m_Vertices.push_back(uv[0].x);
 							m_OpaqueMesh.m_Vertices.push_back(uv[0].y);
-							m_OpaqueMesh.m_Vertices.push_back(occlusion[0]);
+							m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 							m_OpaqueMesh.m_Vertices.push_back(v5.x);
 							m_OpaqueMesh.m_Vertices.push_back(v5.y);
@@ -966,7 +972,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_OpaqueMesh.m_Vertices.push_back(n1.z);
 							m_OpaqueMesh.m_Vertices.push_back(uv[1].x);
 							m_OpaqueMesh.m_Vertices.push_back(uv[1].y);
-							m_OpaqueMesh.m_Vertices.push_back(occlusion[1]);
+							m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 							m_OpaqueMesh.m_Vertices.push_back(v6.x);
 							m_OpaqueMesh.m_Vertices.push_back(v6.y);
@@ -976,7 +982,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_OpaqueMesh.m_Vertices.push_back(n1.z);
 							m_OpaqueMesh.m_Vertices.push_back(uv[2].x);
 							m_OpaqueMesh.m_Vertices.push_back(uv[2].y);
-							m_OpaqueMesh.m_Vertices.push_back(occlusion[2]);
+							m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 							m_OpaqueMesh.m_Vertices.push_back(v2.x);
 							m_OpaqueMesh.m_Vertices.push_back(v2.y);
@@ -986,7 +992,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_OpaqueMesh.m_Vertices.push_back(n1.z);
 							m_OpaqueMesh.m_Vertices.push_back(uv[3].x);
 							m_OpaqueMesh.m_Vertices.push_back(uv[3].y);
-							m_OpaqueMesh.m_Vertices.push_back(occlusion[3]);
+							m_OpaqueMesh.m_Vertices.push_back(occlusion);
 
 							m_OpaqueMesh.m_Indices.push_back(indices[0] + (m_OpaqueMesh.m_NumberOfFaces * 4));
 							m_OpaqueMesh.m_Indices.push_back(indices[1] + (m_OpaqueMesh.m_NumberOfFaces * 4));
@@ -1007,7 +1013,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_TranslucentMesh.m_Vertices.push_back(n0.z);
 							m_TranslucentMesh.m_Vertices.push_back(uv[0].x);
 							m_TranslucentMesh.m_Vertices.push_back(uv[0].y);
-							m_TranslucentMesh.m_Vertices.push_back(occlusion[0]);
+							m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 							m_TranslucentMesh.m_Vertices.push_back(v4.x);
 							m_TranslucentMesh.m_Vertices.push_back(v4.y);
@@ -1017,7 +1023,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_TranslucentMesh.m_Vertices.push_back(n0.z);
 							m_TranslucentMesh.m_Vertices.push_back(uv[1].x);
 							m_TranslucentMesh.m_Vertices.push_back(uv[1].y);
-							m_TranslucentMesh.m_Vertices.push_back(occlusion[1]);
+							m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 							m_TranslucentMesh.m_Vertices.push_back(v7.x);
 							m_TranslucentMesh.m_Vertices.push_back(v7.y);
@@ -1027,7 +1033,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_TranslucentMesh.m_Vertices.push_back(n0.z);
 							m_TranslucentMesh.m_Vertices.push_back(uv[2].x);
 							m_TranslucentMesh.m_Vertices.push_back(uv[2].y);
-							m_TranslucentMesh.m_Vertices.push_back(occlusion[2]);
+							m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 							m_TranslucentMesh.m_Vertices.push_back(v3.x);
 							m_TranslucentMesh.m_Vertices.push_back(v3.y);
@@ -1037,7 +1043,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_TranslucentMesh.m_Vertices.push_back(n0.z);
 							m_TranslucentMesh.m_Vertices.push_back(uv[3].x);
 							m_TranslucentMesh.m_Vertices.push_back(uv[3].y);
-							m_TranslucentMesh.m_Vertices.push_back(occlusion[3]);
+							m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 							m_TranslucentMesh.m_Indices.push_back(indices[0] + (m_TranslucentMesh.m_NumberOfFaces * 4));
 							m_TranslucentMesh.m_Indices.push_back(indices[1] + (m_TranslucentMesh.m_NumberOfFaces * 4));
@@ -1056,7 +1062,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_TranslucentMesh.m_Vertices.push_back(n1.z);
 							m_TranslucentMesh.m_Vertices.push_back(uv[0].x);
 							m_TranslucentMesh.m_Vertices.push_back(uv[0].y);
-							m_TranslucentMesh.m_Vertices.push_back(occlusion[0]);
+							m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 							m_TranslucentMesh.m_Vertices.push_back(v5.x);
 							m_TranslucentMesh.m_Vertices.push_back(v5.y);
@@ -1066,7 +1072,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_TranslucentMesh.m_Vertices.push_back(n1.z);
 							m_TranslucentMesh.m_Vertices.push_back(uv[1].x);
 							m_TranslucentMesh.m_Vertices.push_back(uv[1].y);
-							m_TranslucentMesh.m_Vertices.push_back(occlusion[1]);
+							m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 							m_TranslucentMesh.m_Vertices.push_back(v6.x);
 							m_TranslucentMesh.m_Vertices.push_back(v6.y);
@@ -1076,7 +1082,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_TranslucentMesh.m_Vertices.push_back(n1.z);
 							m_TranslucentMesh.m_Vertices.push_back(uv[2].x);
 							m_TranslucentMesh.m_Vertices.push_back(uv[2].y);
-							m_TranslucentMesh.m_Vertices.push_back(occlusion[2]);
+							m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 							m_TranslucentMesh.m_Vertices.push_back(v2.x);
 							m_TranslucentMesh.m_Vertices.push_back(v2.y);
@@ -1086,7 +1092,7 @@ void Chunk::SampleRenderableFaces(Chunk* chunksArround[8])
 							m_TranslucentMesh.m_Vertices.push_back(n1.z);
 							m_TranslucentMesh.m_Vertices.push_back(uv[3].x);
 							m_TranslucentMesh.m_Vertices.push_back(uv[3].y);
-							m_TranslucentMesh.m_Vertices.push_back(occlusion[3]);
+							m_TranslucentMesh.m_Vertices.push_back(occlusion);
 
 							m_TranslucentMesh.m_Indices.push_back(indices[0] + (m_TranslucentMesh.m_NumberOfFaces * 4));
 							m_TranslucentMesh.m_Indices.push_back(indices[1] + (m_TranslucentMesh.m_NumberOfFaces * 4));

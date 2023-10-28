@@ -189,6 +189,8 @@ void Player::ResolveHorizontalMovement()
 		direction += m_MovementIntentions[i];
 	}
 
+	direction = glm::normalize(direction);
+
 	m_Velocity.x = direction.x * m_Speed;
 	m_Velocity.z = direction.z * m_Speed;
 

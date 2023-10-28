@@ -37,13 +37,14 @@ void showFramesPerSecond(GLFWwindow* window)
     g_CurrTime = (float)glfwGetTime();
     g_FramesCounter += 1;
 
-    float diff = g_CurrTime - g_LastTime;
+    float delta = g_CurrTime - g_LastTime;
 
-    if (diff >= 1.0f / 30.0f)
+    if (delta >= 1.0f / 30.0f)
     {
-        std::string FPS = std::to_string((int)((1.0f / diff) * g_FramesCounter));
-        std::string ms = std::to_string((diff / g_FramesCounter) * 1000.0f);
-        std::string newTitle = "Minecraft - [" + FPS + " FPS / " + ms + " ms]";
+        float FPS = (1.0f / delta) * g_FramesCounter;
+        float ms = (delta / g_FramesCounter) * 1000.0f;
+
+        std::string newTitle = "ZCraft - [" + std::to_string(int(FPS)) + " FPS / " + std::to_string(ms) + " ms]";
 
         glfwSetWindowTitle(window, newTitle.c_str());
 
@@ -67,11 +68,7 @@ int main(int argc, char* argv[])
 
     // glfwWindowHint(GLFW_SAMPLES, 4);
 
-    GLFWwindow* window = glfwCreateWindow(g_ScreenWidth, g_ScreenHeight, "Minecraft", NULL, NULL);
-    glfwMakeContextCurrent(window);
-
-    glfwSwapInterval(0); // Remove FPS limit.
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    GLFWwindow* window = glfwCreateWindow(g_ScreenWidth, g_ScreenHeight, "ZCraft", NULL, NULL);
 
     if (!window)
     {
@@ -80,17 +77,33 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+
+    GLFWwindow* parallelContext = glfwCreateWindow(g_ScreenWidth, g_ScreenHeight, "", NULL, window);
+
+    if (!parallelContext)
+    {
+        std::cout << "[ERROR] Failed to create GLFW parallel context." << std::endl;
+
+        return -1;
+    }
+
+    glfwMakeContextCurrent(window);
+
+    glfwSwapInterval(0); // Remove FPS limit.
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+    glfwSetKeyCallback(window, keyboardCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
+    glfwSetCursorPosCallback(window, cursorPositionCallback);
+
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "[ERROR] Failed to initialize GLAD." << std::endl;
 
         return -1;
     }
-
-    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-    glfwSetKeyCallback(window, keyboardCallback);
-    glfwSetMouseButtonCallback(window, mouseButtonCallback);
-    glfwSetCursorPosCallback(window, cursorPositionCallback);
 
     glViewport(0, 0, g_ScreenWidth, g_ScreenHeight);
 

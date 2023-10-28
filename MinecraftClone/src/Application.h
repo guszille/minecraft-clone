@@ -12,8 +12,8 @@
 #include "graphics/core/DepthMap.h"
 #include "graphics/core/TextRenderer.h"
 
-#include "util/Player.h"
-#include "util/InventorySystem.h"
+#include "player/Player.h"
+#include "player/InventorySystem.h"
 
 #include "world/World.h"
 #include "world/NoiseGenerator.h"
