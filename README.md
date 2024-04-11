@@ -26,9 +26,17 @@ The project is being developed as a way to study some computer graphics and game
 <p align="center">Enviroment</p>
 
 ![Enviroment 1](./MinecraftClone/res/screenshots/enviroment1.png)
+![Enviroment 2](./MinecraftClone/res/screenshots/enviroment2.png)
+
+<p align="center">Ambient Occlusion (Simulation)</p>
+
+![Enviroment 2 AO](./MinecraftClone/res/screenshots/enviroment2_cornershadows.png)
+
+<p align="center">Depth Map / Shadow Map</p>
+
+![Depth Map](./MinecraftClone/res/screenshots/depthmap.png)
 
 <p align="center">Building</p>
 
-![House 1](./MinecraftClone/res/screenshots/house1.png)
-![House 2](./MinecraftClone/res/screenshots/house2.png)
-![House 3](./MinecraftClone/res/screenshots/house3.png)
+![House](./MinecraftClone/res/screenshots/house1.png)
+![Bunker](./MinecraftClone/res/screenshots/bunker1.png)
